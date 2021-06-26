@@ -75,7 +75,7 @@ data TxOutTx = TxOutTx { txOutTxTx :: Tx, txOutTxOut :: TxOut }
     deriving anyclass (Serialise, ToJSON, FromJSON)
 ```
 
-Very simmilarly to `TxOutRef`, `TxOutTx` also joins two existing data types (`TxOut` and `Tx`), but, differently, doesn't store a pointer to the transaction, but the transaction it self, as it may be helpfull to not only know where a transaction output came from, but also explore it's paramaters.
+Stores the transaction a transaction output together with the transaction it self, as it may be helpfull to not only know where a transaction output came from, but also explore it's paramaters.
 
 ## [TxIn](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Tx.hs#LC331)
 
