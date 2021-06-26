@@ -176,7 +176,7 @@ data InputConstraint a =
         } deriving stock (Haskell.Show, Generic, Haskell.Functor)
 ```
 
-Simmilarly to [`TxConstraint`](#txconstraint), we can create `InputConstraint`s, that, when used with a helper function, basically say "Create an input that follow these conditions: ...".
+Simmilarly to [`TxConstraint`](#txconstraint), we can create `InputConstraint`s, that basically say "This input need to follow these conditions: ...".
 
 ### OutputConstraint
 
@@ -189,3 +189,128 @@ data OutputConstraint a =
 ```
 
 [`InputConstraint`](#inputconstraint), but instead of being used to create inputs, is used to create outputs.
+
+## [Request](https://github.com/input-output-hk/plutus/blob/master/plutus-contract/src/Plutus/Contract/Request.hs)
+
+### awaitSlot
+
+> Wait until the slot
+
+```haskell
+awaitSlot ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => Slot
+    -> Contract w s e Slot
+awaitSlot s = pabReq (AwaitSlotReq s) E._AwaitSlotResp
+```
+
+### currentSlot
+
+> Get the current slot number
+
+```haskell
+currentSlot ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => Contract w s e Slot
+currentSlot = pabReq CurrentSlotReq E._CurrentSlotResp
+```
+
+### waitNSlots
+
+> Wait for a number of slots to pass
+
+```haskell
+waitNSlots ::
+  forall w s e.
+  ( AsContractError e
+  )
+  => Natural
+  -> Contract w s e Slot
+waitNSlots n = do
+  c <- currentSlot
+  awaitSlot $ c + fromIntegral n
+```
+
+### utxoAt
+
+> Get the unspent transaction outputs at an address.
+
+```haskell
+utxoAt ::
+    forall w s e.
+    ( AsContractError e
+    )
+    => Address
+    -> Contract w s e UtxoMap
+utxoAt addr = fmap utxo $ pabReq (UtxoAtReq addr) E._UtxoAtResp
+```
+
+### ownPubKey
+
+> Get a public key belonging to the wallet that runs this contract.
+>   * Any funds paid to this public key will be treated as the wallet's own
+>     funds
+>   * The wallet is able to sign transactions with the private key of this
+>     public key, for example, if the public key is added to the
+>     'requiredSignatures' field of 'Tx'.
+>   * There is a 1-n relationship between wallets and public keys (although in
+>     the mockchain n=1)
+
+```haskell
+ownPubKey :: forall w s e. (AsContractError e) => Contract w s e PubKey
+ownPubKey = pabReq OwnPublicKeyReq E._OwnPublicKeyResp
+```
+
+### submitTx
+
+> Build a transaction that satisfies the constraints, then submit it to the network. The constraints do not refer to any typed script inputs or outputs.
+
+```haskell
+submitTx :: forall w s e.
+  ( AsContractError e
+  )
+  => TxConstraints Void Void
+  -> Contract w s e Tx
+submitTx = submitTxConstraintsWith @Void mempty
+```
+
+### submitTxConstraints
+
+> Build a transaction that satisfies the constraints, then submit it to the network. Using the current outputs at the contract address and the contract's own public key to solve the constraints.
+
+```haskell
+submitTxConstraints
+  :: forall a w s e.
+  ( PlutusTx.IsData (RedeemerType a)
+  , PlutusTx.IsData (DatumType a)
+  , AsContractError e
+  )
+  => TypedValidator a
+  -> TxConstraints (RedeemerType a) (DatumType a)
+  -> Contract w s e Tx
+submitTxConstraints inst = submitTxConstraintsWith (Constraints.typedValidatorLookups inst)
+```
+
+### submitTxConstraintsWith
+
+> Build a transaction that satisfies the constraints, then submit it to the network. Using the given constraints.
+
+```haskell
+submitTxConstraintsWith
+  :: forall a w s e.
+  ( PlutusTx.IsData (RedeemerType a)
+  , PlutusTx.IsData (DatumType a)
+  , AsContractError e
+  )
+  => ScriptLookups a
+  -> TxConstraints (RedeemerType a) (DatumType a)
+  -> Contract w s e Tx
+
+submitTxConstraintsWith sl constraints = do
+  tx <- either (throwError . review _ConstraintResolutionError) pure (Constraints.mkTx sl constraints)
+  submitUnbalancedTx tx
+```
