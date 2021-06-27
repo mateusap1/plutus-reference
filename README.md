@@ -49,7 +49,7 @@ data TxOut = TxOut {
     deriving anyclass (Serialise, ToJSON, FromJSON, NFData)
 ```
 
-It is, as the name suggests, a represantation of a transaction output.
+It is, as the name suggests, a represantation of a transaction output. In other words, the value received by an address at the end of an UTXO and it's corresponding datum. 
 
 
 ### TxOutRef
