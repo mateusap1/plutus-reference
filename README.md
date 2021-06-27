@@ -1,6 +1,21 @@
 # plutus-reference
 A repository with some information I may need to refer to later about the plutus lectures
 
+## [PlutusTx](https://github.com/input-output-hk/plutus/tree/master/plutus-tx/src/PlutusTx)
+
+### IsData
+
+> A typeclass for types that can be converted to and from 'Data'.
+
+```haskell
+class IsData (a :: Type) where
+    toData :: a -> Data
+    -- TODO: this should probably provide some kind of diagnostics
+    fromData :: Data -> Maybe a
+```
+
+`IsData` is a class type that transforms normal types into Datum types or vice-versa. So, for instance, if we have a transaction that stores as Datum an integer and we want to use this integer and add it to another number, we should use the `fromData` method inside the `IsData` class.
+
 ## [Transactions](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Tx.hs)
 
 ### Tx
