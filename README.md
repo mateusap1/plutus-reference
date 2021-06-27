@@ -156,6 +156,19 @@ data ScriptContext = ScriptContext{scriptContextTxInfo :: TxInfo, scriptContextP
 
 `ScriptContext` stores the all the information about a possible transaction, as well as, what it is used for. Both of this actions are handled by `TxInfo` and `ScriptPurpose`, so it is simply a combination of both of this data types.
 
+### findDatum
+
+> Find the data corresponding to a data hash, if there is one
+
+```haskell
+findDatum :: DatumHash -> TxInfo -> Maybe Datum
+findDatum dsh TxInfo{txInfoData} = snd <$> find f txInfoData
+    where
+        f (dsh', _) = dsh' == dsh
+```
+
+Because `TxOut`s don't store the datum it self, but it's hash, it is important to have a helper function that, inside `TxInfo` searches for a `Datum` based on a gived `DatumHash`. That's what `findDatum` does.
+
 ## [Constraints](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger/src/Ledger/Constraints/TxConstraints.hs)
 
 ### TxConstraint
