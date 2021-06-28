@@ -169,7 +169,7 @@ findDatum dsh TxInfo{txInfoData} = snd <$> find f txInfoData
 
 Because `TxOut`s don't store the datum it self, but it's hash, it is important to have a helper function that, inside `TxInfo` searches for a `Datum` based on a gived `DatumHash`. That's what `findDatum` does.
 
-## [Constraints](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger/src/Ledger/Constraints/TxConstraints.hs)
+## [Contract](https://github.com/input-output-hk/plutus/tree/master/plutus-contract/src/Plutus/Contract)
 
 ### TxConstraint
 
@@ -217,8 +217,6 @@ data OutputConstraint a =
 ```
 
 [`InputConstraint`](#inputconstraint), but instead of being used to create inputs, is used to create outputs.
-
-## [Request](https://github.com/input-output-hk/plutus/blob/master/plutus-contract/src/Plutus/Contract/Request.hs)
 
 ### awaitSlot
 
@@ -341,4 +339,21 @@ submitTxConstraintsWith
 submitTxConstraintsWith sl constraints = do
   tx <- either (throwError . review _ConstraintResolutionError) pure (Constraints.mkTx sl constraints)
   submitUnbalancedTx tx
+```
+
+
+### ownPubKey
+
+> Get a public key belonging to the wallet that runs this contract.
+   * Any funds paid to this public key will be treated as the wallet's own
+     funds
+   * The wallet is able to sign transactions with the private key of this
+     public key, for example, if the public key is added to the
+     'requiredSignatures' field of 'Tx'.
+   * There is a 1-n relationship between wallets and public keys (although in
+     the mockchain n=1)
+
+```haskell
+ownPubKey :: forall w s e. (AsContractError e, HasOwnPubKey s) => Contract w s e PubKey
+ownPubKey = requestMaybe @w @OwnPubKeySym @_ @_ @s WaitingForPubKey Just
 ```
