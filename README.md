@@ -1,5 +1,5 @@
 # plutus-reference
-A repository with some information I may need to refer to later about the plutus lectures
+A repository with some information I may need to refer later about the plutus lectures
 
 ## [PlutusTx](https://github.com/input-output-hk/plutus/tree/master/plutus-tx/src/PlutusTx)
 
