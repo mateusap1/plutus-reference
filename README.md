@@ -3,7 +3,7 @@ A repository with some information I may need to refer later about the plutus le
 
 * [Ledger](#ledger)
     * [Ada](#ada)
-    * [Address]()
+    * [Address](#address)
     * [Api]()
     * [Bytes]()
     * [Contexts]()
@@ -164,6 +164,112 @@ divide (Lovelace a) (Lovelace b) = Lovelace (P.divide a b)
 isZero :: Ada -> Bool
 isZero (Lovelace i) = i == 0
 ```
+
+### [Address](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Address.hs)
+
+#### Address
+
+> Address with two kinds of credentials, normal and staking
+
+```haskell
+data Address = Address{ addressCredential :: Credential, addressStakingCredential :: (Maybe StakingCredential)}
+    deriving stock (Eq, Ord, Show, Generic)
+    deriving anyclass (ToJSON, FromJSON, ToJSONKey, FromJSONKey, Serialise, Hashable, NFData)
+
+instance Pretty Address where
+    pretty (Address cred stakingCred) =
+        let staking = maybe "no staking credential" pretty stakingCred in
+        "addressed to" <+> pretty cred <+> parens staking
+
+
+instance PlutusTx.Eq Address where
+    Address cred stakingCred == Address cred' stakingCred' =
+        cred PlutusTx.== cred'
+        PlutusTx.&& stakingCred PlutusTx.== stakingCred'
+```
+
+`Address` is a data type that holds a `Credential` and a `StakingCredential`, The `Credential` is a data type that either holds a user's public key hash or a script validator hash. The `StakingCredential`, which can be `Nothing`, holds either a `StakingHash` or a `StakingPtr` and is used to assign rewards. 
+
+To be honest, I don't quite understand what a staking credential actually is, so fell free to submit a Pull Request giving a better explanation.
+
+#### pubKeyAddress
+
+> The address that should be targeted by a transaction output locked by the given public key.
+
+```haskell
+pubKeyAddress :: PubKey -> Address
+pubKeyAddress pk = Address (PubKeyCredential (pubKeyHash pk)) Nothing
+```
+
+Takes the user's `PubKey`, hash it, makes a credential out of it and gives it as an `Address` constructor input.
+
+#### pubKeyHashAddress
+
+> The address that should be targeted by a transaction output locked by the public key with the given hash.
+
+```haskell
+pubKeyHashAddress :: PubKeyHash -> Address
+pubKeyHashAddress pkh = Address (PubKeyCredential pkh) Nothing
+```
+
+The only difference from `pubKeyAddress` is that it already receives a hashed public key so it doesn't need to hash it again.
+
+
+#### toPubKeyHash
+
+> The PubKeyHash of the address, if any
+
+```haskell
+toPubKeyHash :: Address -> Maybe PubKeyHash
+toPubKeyHash (Address (PubKeyCredential k) _) = Just k
+toPubKeyHash _                                = Nothing
+```
+
+Takes an `Address`, verify if it's credential is a public key one and, if so, returns it. If, in the other hand, is a script validator, returns `Nothing`.
+
+#### toValidatorHash
+
+> The validator hash of the address, if any
+
+```haskell
+toValidatorHash :: Address -> Maybe ValidatorHash
+toValidatorHash (Address (ScriptCredential k) _) = Just k
+toValidatorHash _   
+```
+
+Same thing as `toPubKeyHash`, but instead of making sure that the address credential is a public key, it want's a script validator credential.
+
+#### scriptAddress
+
+> The address that should be used by a transaction output locked by the given validator script.
+
+```haskell
+scriptAddress :: Validator -> Address
+scriptAddress validator = Address (ScriptCredential (validatorHash validator)) Nothing 
+```
+
+Same thing as `pubKeyAddress`, but with a script validator instead of a public key. Takes the user's `Validator`, hash it, makes a credential out of it and gives it as an `Address` constructor input.
+
+#### scriptHashAddress
+
+> he address that should be used by a transaction output locked by the given validator script hash.
+
+```haskell
+scriptHashAddress :: ValidatorHash -> Address
+scriptHashAddress vh = Address (ScriptCredential vh) Nothing
+```
+
+Takes the user's `ValidatorHash`, makes a credential out of it and gives it as an `Address` constructor input.
+
+#### stakingCredential
+
+> The staking credential of an address (if any)
+
+```haskell
+stakingCredential :: Address -> Maybe StakingCredential
+stakingCredential (Address _ s) = s
+```
+Returns a `StakingCredential` if the given address has one
 
 ## [PlutusTx](https://github.com/input-output-hk/plutus/tree/master/plutus-tx/src/PlutusTx)
 
