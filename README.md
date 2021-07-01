@@ -1,6 +1,170 @@
 # plutus-reference
 A repository with some information I may need to refer later about the plutus lectures
 
+* [Ledger](#ledger)
+    * [Ada](#ada)
+    * [Address]()
+    * [Api]()
+    * [Bytes]()
+    * [Contexts]()
+    * [Credential]()
+    * [Crypto]()
+    * [DCert]()
+    * [Examples]()
+    * [Interval]()
+    * [Orphans]()
+    * [Scripts]()
+    * [Slot]()
+    * [Time]()
+    * [Tx]()
+    * [TxId]()
+    * [Value]()
+
+## [Ledger](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger)
+
+### [Ada](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Ada.hs)
+
+#### adaSymbol
+
+> The 'CurrencySymbol' of the 'Ada' currency.
+
+```haskell
+adaSymbol :: CurrencySymbol
+adaSymbol = TH.currencySymbol emptyByteString
+```
+
+A `CurrencySymbol` is the hash of a script that will be executed to validate minting and burning. Because ADA is deflationary, it uses an "empty script", which means no one is able to mint nor burn any ADA. That's why `adaSymbol` is an `emptyByteString`.
+
+#### adaToken
+
+> The 'TokenName' of the 'Ada' currency.
+
+```haskell
+adaToken :: TokenName
+adaToken = TH.tokenName emptyByteString
+```
+
+A `TokenName` is a string that represents a token (pretty self explanatory). So, for instance, if Bitcoin was a Plutus token, it's token name would probably be `"btc"`. In this spirit, `adaToken` is simply Ada's token name, but because Ada is the Cardano's "default token", it doesn't receive an `"ada"` token name, but instead an `emptyByteString`.
+
+#### Ada
+
+> ADA, the special currency on the Cardano blockchain. The unit of Ada is Lovelace, and 1M Lovelace is one Ada. See note [Currencies] in 'Ledger.Validation.Value.TH'.
+
+```haskell
+newtype Ada = Lovelace { getLovelace :: Integer }
+    deriving (Haskell.Enum)
+    deriving stock (Haskell.Eq, Haskell.Ord, Haskell.Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
+    deriving newtype (Eq, Ord, Haskell.Num, AdditiveSemigroup, AdditiveMonoid, AdditiveGroup, MultiplicativeSemigroup, MultiplicativeMonoid, Haskell.Integral, Haskell.Real, Serialise, PlutusTx.IsData)
+    deriving Pretty via (Tagged "Lovelace:" Integer)
+
+instance Haskell.Semigroup Ada where
+    Lovelace a1 <> Lovelace a2 = Lovelace (a1 + a2)
+
+instance Semigroup Ada where
+    Lovelace a1 <> Lovelace a2 = Lovelace (a1 + a2)
+
+instance Haskell.Monoid Ada where
+    mempty = Lovelace 0
+
+instance Monoid Ada where
+    mempty = Lovelace 0
+
+makeLift ''Ada
+```
+
+#### getAda
+
+> Get the amount of Ada (the unit of the currency Ada) in this 'Ada' value.
+
+```haskell
+getAda :: Ada -> Micro
+getAda (Lovelace i) = MkFixed i
+```
+
+`Micro` is a representation of µ, which is just another way of saying `10^-6`. So, what `getAda` is doing is getting a `Lovelace` amount and wrapping it in a type that is a million times smaller than the value it holds.
+
+#### toValue
+
+> Create a 'Value' containing only the given 'Ada'.
+
+```haskell
+toValue :: Ada -> Value
+toValue (Lovelace i) = TH.singleton adaSymbol adaToken i
+```
+
+Based on an Ada (an amount basically), create a `Value`, which contains the token symbol, name and amount (in Ada).
+
+#### fromValue
+
+> Get the 'Ada' in the given 'Value'.
+
+```haskell
+fromValue :: Value -> Ada
+fromValue v = Lovelace (TH.valueOf v adaSymbol adaToken)
+```
+
+Ignores everything except the amount from a `Value`. So, for instance, one might want to verify if someone has sufficient funds. For that, he might not need to know the token's name or symbol, so he should use `fromValue` to extract the Ada amount only.
+
+#### lovelaceOf
+
+> Create 'Ada' representing the given quantity of Lovelace (the unit of the currency Ada).
+
+```haskell
+lovelaceOf :: Integer -> Ada
+lovelaceOf = Lovelace
+```
+
+#### adaOf
+
+> Create 'Ada' representing the given quantity of Ada (1M Lovelace).
+
+```haskell
+adaOf :: Micro -> Ada
+adaOf (MkFixed x) = Lovelace x
+```
+
+#### lovelaceValueOf
+
+> A 'Value' with the given amount of Lovelace (the currency unit).
+>
+> @lovelaceValueOf == toValue . lovelaceOf@
+
+```haskell
+lovelaceValueOf :: Integer -> Value
+lovelaceValueOf = TH.singleton adaSymbol adaToken
+```
+
+#### adaValueOf
+
+> A 'Value' with the given amount of Ada (the currency unit).
+>
+> @adaValueOf == toValue . adaOf@
+
+```haskell
+adaValueOf :: Micro -> Value
+adaValueOf (MkFixed x) = TH.singleton adaSymbol adaToken x
+```
+
+#### divide
+
+> Divide one 'Ada' value by another.
+
+```haskell
+divide :: Ada -> Ada -> Ada
+divide (Lovelace a) (Lovelace b) = Lovelace (P.divide a b)
+```
+
+
+#### isZero
+
+> Check whether an 'Ada' value is zero.
+
+```haskell
+isZero :: Ada -> Bool
+isZero (Lovelace i) = i == 0
+```
+
 ## [PlutusTx](https://github.com/input-output-hk/plutus/tree/master/plutus-tx/src/PlutusTx)
 
 ### IsData
