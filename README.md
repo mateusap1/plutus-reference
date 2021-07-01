@@ -4,7 +4,7 @@ A repository with some information I may need to refer later about the plutus le
 * [Ledger](#ledger)
     * [Ada](#ada)
     * [Address](#address)
-    * [Api]()
+    * [Api](#api)
     * [Bytes]()
     * [Contexts]()
     * [Credential]()
@@ -271,6 +271,278 @@ stakingCredential (Address _ s) = s
 ```
 Returns a `StakingCredential` if the given address has one
 
+### [Api](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Api.hs)
+
+Nothing here, feel free to contribute!
+
+### [Bytes](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Bytes.hs)
+
+Nothing here, feel free to contribute!
+
+
+### [Contexts](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Contexts.hs)
+
+#### TxInInfo
+
+> An input of a pending transaction.
+
+```haskell
+data TxInInfo = TxInInfo
+    { txInInfoOutRef   :: TxOutRef
+    , txInInfoResolved :: TxOut
+    } deriving (Generic)
+```
+
+#### ScriptPurpose
+
+> Purpose of the script that is currently running
+
+```haskell
+data ScriptPurpose
+    = Minting CurrencySymbol
+    | Spending TxOutRef
+    | Rewarding StakingCredential
+    | Certifying DCert
+```
+
+The code definition says it all, it's a data type that defines the purpose of the current script. If a script purpose is `Miniting`, then it will need to store the `CurrencySymbol`, which is the hash of the contract that contains the minting policy.
+
+If, alternativily, the script purpose is `Spending`, then it should store the [`TxOutRef`](#txoutref), that is: the reference to the ouput of the transaction that will be "spending".
+
+If, in the other hand, it's purpouse is `Rewarding`, then it should store the `StakingCredential`, which is a credential containing the necessary information to assign rewards. The last one, I have no idea what is used for.
+
+#### TxInfo
+
+> A pending transaction. This is the view as seen by validator scripts, so some details are stripped out.
+
+```haskell
+data TxInfo = TxInfo
+    { txInfoInputs      :: [TxInInfo] -- ^ Transaction inputs
+    , txInfoOutputs     :: [TxOut] -- ^ Transaction outputs
+    , txInfoFee         :: Value -- ^ The fee paid by this transaction.
+    -- TODO: rename to txInfoMint, but this requires changes in cardano-ledger-specs
+    , txInfoForge       :: Value -- ^ The 'Value' minted by this transaction.
+    , txInfoDCert       :: [DCert] -- ^ Digests of certificates included in this transaction
+    , txInfoWdrl        :: [(StakingCredential, Integer)] -- ^ Withdrawals
+    , txInfoValidRange  :: POSIXTimeRange -- ^ The valid range for the transaction.
+    , txInfoSignatories :: [PubKeyHash] -- ^ Signatures provided with the transaction, attested that they all signed the tx
+    , txInfoData        :: [(DatumHash, Datum)]
+    , txInfoId          :: TxId
+    -- ^ Hash of the pending transaction (excluding witnesses)
+    } deriving (Generic)
+```
+
+When validating a transaction inside a contract, it is important to know some information about this transaction, this is what `TxInfo` is used for. In order to make sure, for example, that a token is being minted by someone with permission, the script could verify if any `PubKeyHash` of `txInfoSignatories` is inside the list of allowed users.
+
+#### ScriptContext
+
+```haskell
+data ScriptContext = ScriptContext{scriptContextTxInfo :: TxInfo, scriptContextPurpose :: ScriptPurpose }
+```
+
+`ScriptContext` stores the all the information about a possible transaction, as well as, what it is used for. Both of this actions are handled by `TxInfo` and `ScriptPurpose`, so it is simply a combination of both of this data types.
+
+#### findOwnInput
+
+> Find the input currently being validated.
+
+```haskell
+findOwnInput :: ScriptContext -> Maybe TxInInfo
+findOwnInput ScriptContext{scriptContextTxInfo=TxInfo{txInfoInputs}, scriptContextPurpose=Spending txOutRef} =
+    find (\TxInInfo{txInInfoOutRef} -> txInInfoOutRef == txOutRef) txInfoInputs
+findOwnInput _ = Nothing
+```
+
+The first thing `findOwnInput` does is to limit the number of valid paramaters (only contexts with a spending purpose, for example, will pass). By doing that we get two important variables: `txInfoInputs` and `txOutRef`, the former is a list containing all inputs in the context of this script, the latter is a reference to the user's previous UTxO output (our current input). What the function does is to go over each input, extract it's `TxInInfoOutRef` and, if it is equal to our `txOutRef`, return it, otherwise return `Nothing`.
+
+#### findDatum
+
+> Find the data corresponding to a data hash, if there is one
+
+```haskell
+findDatum :: DatumHash -> TxInfo -> Maybe Datum
+findDatum dsh TxInfo{txInfoData} = snd <$> find f txInfoData
+    where
+        f (dsh', _) = dsh' == dsh
+```
+
+Given a `DatumHash` and a `TxInfo`, search for a `Datum` with the corresponding hash inside `txInfoData` (an element of `TxInfo`). This is important because `TxOut`s don't store the datum it self, but it's hash, so in order to extract the data it self from a `TxOut` we need to use this function.
+
+#### findDatumHash
+
+> Find the hash of a datum, if it is part of the pending transaction's hashes
+
+```haskell
+findDatumHash :: Datum -> TxInfo -> Maybe DatumHash
+findDatumHash ds TxInfo{txInfoData} = fst <$> find f txInfoData
+    where
+        f (_, ds') = ds' == ds
+```
+
+Does the same thing as `findDatum`, but instead of searching for a `Datum` given a `DatumHash`, searchs for a `DatumHash` given a `Datum`.
+
+#### findTxInByTxOutRef
+
+```haskell
+findTxInByTxOutRef :: TxOutRef -> TxInfo -> Maybe TxInInfo
+findTxInByTxOutRef outRef TxInfo{txInfoInputs} =
+    find (\TxInInfo{txInInfoOutRef} -> txInInfoOutRef == outRef) txInfoInputs
+```
+
+Given a reference to an output (`TxOutRef`) and information about a transaction (`TxInfo`), `findTxInByTxOutRef` searches for an input whose reference to it's previous UTxO output is the same as the given output reference.
+
+#### findContinuingOutputs
+
+> Finds all the outputs that pay to the same script address that we are currently spending from, if any.
+
+```haskell
+findContinuingOutputs :: ScriptContext -> [Integer]
+findContinuingOutputs ctx | Just TxInInfo{txInInfoResolved=TxOut{txOutAddress}} <- findOwnInput ctx = findIndices (f txOutAddress) (txInfoOutputs $ scriptContextTxInfo ctx)
+    where
+        f addr TxOut{txOutAddress=otherAddress} = addr == otherAddress
+findContinuingOutputs _ = Builtins.error()
+```
+
+#### getContinuingOutputs
+
+```haskell
+getContinuingOutputs :: ScriptContext -> [TxOut]
+getContinuingOutputs ctx | Just TxInInfo{txInInfoResolved=TxOut{txOutAddress}} <- findOwnInput ctx = filter (f txOutAddress) (txInfoOutputs $ scriptContextTxInfo ctx)
+    where
+        f addr TxOut{txOutAddress=otherAddress} = addr == otherAddress
+getContinuingOutputs _ = Builtins.error()
+```
+
+#### scriptCurrencySymbol
+
+> The 'CurrencySymbol' of a 'MintingPolicy'
+
+```haskell
+scriptCurrencySymbol :: MintingPolicy -> CurrencySymbol
+scriptCurrencySymbol scrpt = let (MintingPolicyHash hsh) = mintingPolicyHash scrpt in Value.currencySymbol hsh
+```
+
+A `scriptCurrencySymbol` is the hash of the script that validates the minting policy. So that's what this function does, it gets a `MintingPolicy` script, hashes it and returns it in a `Value.currencySymbol` form.
+
+#### txSignedBy
+
+> Check if a transaction was signed by the given public key.
+
+```haskell
+txSignedBy :: TxInfo -> PubKeyHash -> Bool
+txSignedBy TxInfo{txInfoSignatories} k = case find ((==) k) txInfoSignatories of
+    Just _  -> True
+    Nothing -> False
+```
+
+Goes over each element of the `txInfoSignatories` list (a component of the `TxInfo` we received) and verifies if the signature is equal to the public key hash we want to compare (`k`).
+
+
+#### pubKeyOutput
+
+> Get the public key hash that locks the transaction output, if any.
+
+```haskell
+pubKeyOutput :: TxOut -> Maybe PubKeyHash
+pubKeyOutput TxOut{txOutAddress} = toPubKeyHash txOutAddress
+```
+
+Every `TxOut` contains an address and every `Address` has a Credential that can be of type `PubKeyCredential` or `ScriptCredential`. If the received output has an address with a public key credential, the function returns it's hash, otherwise it returns `Nothing`.
+
+#### ownHashes
+
+> Get the validator and datum hashes of the output that is curently being validated
+
+```haskell
+ownHashes :: ScriptContext -> (ValidatorHash, DatumHash)
+ownHashes (findOwnInput -> Just TxInInfo{txInInfoResolved=TxOut{txOutAddress=Address (ScriptCredential s) _, txOutDatumHash=Just dh}}) = (s,dh)
+ownHashes _                                                                                                                            = Builtins.error ()
+```
+
+#### ownHash
+
+> Get the hash of the validator script that is currently being validated.
+
+```haskell
+ownHash :: ScriptContext -> ValidatorHash
+ownHash p = fst (ownHashes p)
+```
+
+#### fromSymbol
+
+> Convert a 'CurrencySymbol' to a 'ValidatorHash'
+
+```haskell
+fromSymbol :: CurrencySymbol -> ValidatorHash
+fromSymbol (CurrencySymbol s) = ValidatorHash s
+```
+
+#### scriptOutputsAt
+
+> Get the list of 'TxOut' outputs of the pending transaction at a given script address.
+
+```haskell
+scriptOutputsAt :: ValidatorHash -> TxInfo -> [(DatumHash, Value)]
+scriptOutputsAt h p =
+    let flt TxOut{txOutDatumHash=Just ds, txOutAddress=Address (ScriptCredential s) _, txOutValue} | s == h = Just (ds, txOutValue)
+        flt _ = Nothing
+    in mapMaybe flt (txInfoOutputs p)
+```
+
+Return in a `(DatumHash,Value)` format every pending transactions output that has a matching `ValidatorHash` compared to the one received (`h`). In other words, returns a list with every transaction inside a script that has this user's public key as it's output.
+
+#### valueLockedBy
+
+> Get the total value locked by the given validator in this transaction.
+
+```haskell
+valueLockedBy :: TxInfo -> ValidatorHash -> Value
+valueLockedBy ptx h =
+    let outputs = map snd (scriptOutputsAt h ptx)
+    in mconcat outputs
+```
+
+#### pubKeyOutputsAt
+
+> Get the values paid to a public key address by a pending transaction.
+
+```haskell
+pubKeyOutputsAt :: PubKeyHash -> TxInfo -> [Value]
+pubKeyOutputsAt pk p =
+    let flt TxOut{txOutAddress = Address (PubKeyCredential pk') _, txOutValue} | pk == pk' = Just txOutValue
+        flt _                             = Nothing
+    in mapMaybe flt (txInfoOutputs p)
+```
+
+#### valuePaidTo
+
+> Get the total value paid to a public key address by a pending transaction.
+
+```haskell
+valuePaidTo :: TxInfo -> PubKeyHash -> Value
+valuePaidTo ptx pkh = mconcat (pubKeyOutputsAt pkh ptx)
+```
+
+#### adaLockedBy
+
+> Get the total amount of 'Ada' locked by the given validator in this transaction.
+
+```haskell
+adaLockedBy :: TxInfo -> ValidatorHash -> Ada
+adaLockedBy ptx h = Ada.fromValue (valueLockedBy ptx h)
+```
+
+#### signsTransaction
+
+> Check if the provided signature is the result of signing the pending transaction (without witnesses) with the given public key.
+
+```haskell
+signsTransaction :: Signature -> PubKey -> TxInfo -> Bool
+signsTransaction (Signature sig) (PubKey (LedgerBytes pk)) TxInfo{txInfoId=TxId h} =
+    verifySignature pk h sig
+```
+
+
 ## [PlutusTx](https://github.com/input-output-hk/plutus/tree/master/plutus-tx/src/PlutusTx)
 
 ### IsData
@@ -378,66 +650,6 @@ data TxIn = TxIn {
 ```
 
 Very simmilarly to `TxOut`, `TxIn` is simply a represantation of a transaction input.
-
-## [Context](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Contexts.hs)
-
-### ScriptPurpose
-
-> Purpose of the script that is currently running
-
-```haskell
-data ScriptPurpose
-    = Minting CurrencySymbol
-    | Spending TxOutRef
-    | Rewarding StakingCredential
-    | Certifying DCert
-```
-
-The code definition says it all, it's a data type that defines the purpose of the current script. If a script purpose is `Miniting`, then it will need to store the `CurrencySymbol`, which is the hash of the contract that contains the minting policy. If, alternativily, the script purpose is `Spending`, then it should store the [`TxOutRef`](#txoutref), that is: the reference to the ouput of the transaction that will be "spending". The last two ones are not so common.
-
-### TxInfo
-
-> A pending transaction. This is the view as seen by validator scripts, so some details are stripped out.
-
-```haskell
-data TxInfo = TxInfo
-    { txInfoInputs      :: [TxInInfo] -- ^ Transaction inputs
-    , txInfoOutputs     :: [TxOut] -- ^ Transaction outputs
-    , txInfoFee         :: Value -- ^ The fee paid by this transaction.
-    -- TODO: rename to txInfoMint, but this requires changes in cardano-ledger-specs
-    , txInfoForge       :: Value -- ^ The 'Value' minted by this transaction.
-    , txInfoDCert       :: [DCert] -- ^ Digests of certificates included in this transaction
-    , txInfoWdrl        :: [(StakingCredential, Integer)] -- ^ Withdrawals
-    , txInfoValidRange  :: POSIXTimeRange -- ^ The valid range for the transaction.
-    , txInfoSignatories :: [PubKeyHash] -- ^ Signatures provided with the transaction, attested that they all signed the tx
-    , txInfoData        :: [(DatumHash, Datum)]
-    , txInfoId          :: TxId
-    -- ^ Hash of the pending transaction (excluding witnesses)
-    } deriving (Generic)
-```
-
-When validating a transaction inside a contract, it is important to know some information about this transaction, this is what `TxInfo` is used for. In order to make sure, for example, that a token is being minted by someone with permission, the script could verify if any `PubKeyHash` of `txInfoSignatories` is inside the list of allowed users.
-
-### ScriptContext
-
-```haskell
-data ScriptContext = ScriptContext{scriptContextTxInfo :: TxInfo, scriptContextPurpose :: ScriptPurpose }
-```
-
-`ScriptContext` stores the all the information about a possible transaction, as well as, what it is used for. Both of this actions are handled by `TxInfo` and `ScriptPurpose`, so it is simply a combination of both of this data types.
-
-### findDatum
-
-> Find the data corresponding to a data hash, if there is one
-
-```haskell
-findDatum :: DatumHash -> TxInfo -> Maybe Datum
-findDatum dsh TxInfo{txInfoData} = snd <$> find f txInfoData
-    where
-        f (dsh', _) = dsh' == dsh
-```
-
-Because `TxOut`s don't store the datum it self, but it's hash, it is important to have a helper function that, inside `TxInfo` searches for a `Datum` based on a gived `DatumHash`. That's what `findDatum` does.
 
 ## [Contract](https://github.com/input-output-hk/plutus/tree/master/plutus-contract/src/Plutus/Contract)
 
