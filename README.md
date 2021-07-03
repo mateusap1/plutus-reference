@@ -542,6 +542,12 @@ signsTransaction (Signature sig) (PubKey (LedgerBytes pk)) TxInfo{txInfoId=TxId 
     verifySignature pk h sig
 ```
 
+`signsTransaction` makes sure that the given `PubKey` actually produced the given `Signature` by signing thew received `TxInfo`.
+
+More abstractly you could think of the signature as an actual written signature, the transaction information as an important document (maybe a contract) and the public key as some random person. So your basically checking if this person actually signed the document.
+
+More technically, every user has a private and public key. A cryptographic signature is a function that takes a private key and an arbitrary content and returns a value (the signature). Because of some mathematical correlation between the private and public key, we can use the public key together with the signature to know if they actually match (the owner of this public key actually signed it). That's what this function is doing.
+
 
 ## [PlutusTx](https://github.com/input-output-hk/plutus/tree/master/plutus-tx/src/PlutusTx)
 
