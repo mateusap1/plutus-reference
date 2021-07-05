@@ -10,7 +10,7 @@ Note: This is still being written and, because of this, a lot of information is 
     * [Bytes](#bytes)
     * [Contexts](#contexts)
     * [Credential](#credential)
-    * [Crypto]()
+    * [Crypto](#crypto)
     * [DCert]()
     * [Examples]()
     * [Interval]()
@@ -629,6 +629,128 @@ data Credential
 ```
 
 `Credential` is used to, whenever you want to consume an UTxO, prove that you actually "own" this output.
+
+### [Crypto](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Crypto.hs)
+
+#### PubKey
+
+> A cryptographic public key.
+
+```haskell
+newtype PubKey = PubKey { getPubKey :: LedgerBytes }
+    deriving stock (Eq, Ord, Generic)
+    deriving anyclass (Newtype, ToJSON, FromJSON, NFData)
+    deriving newtype (P.Eq, P.Ord, Serialise, PlutusTx.IsData)
+    deriving IsString via LedgerBytes
+    deriving (Show, Pretty) via LedgerBytes
+```
+
+`PubKey` is someone's identity. It's used to identify the user that signed a transaction.
+
+#### PubKeyHash
+
+> The hash of a public key. This is frequently used to identify the public key, rather than the key itself.
+
+```haskell
+newtype PubKeyHash = PubKeyHash { getPubKeyHash :: BS.ByteString }
+    deriving stock (Eq, Ord, Generic)
+    deriving anyclass (ToJSON, FromJSON, Newtype, ToJSONKey, FromJSONKey, NFData)
+    deriving newtype (P.Eq, P.Ord, Serialise, PlutusTx.IsData, Hashable)
+    deriving IsString via LedgerBytes
+    deriving (Show, Pretty) via LedgerBytes
+```
+
+It's one layer above the actual `PubKey`, usually used to identify someone without actually providing the public key it self.
+
+#### PrivateKey
+
+> A cryptographic private key.
+
+```haskell
+newtype PrivateKey = PrivateKey { getPrivateKey :: LedgerBytes }
+    deriving stock (Eq, Ord, Generic)
+    deriving anyclass (ToJSON, FromJSON, Newtype, ToJSONKey, FromJSONKey)
+    deriving newtype (P.Eq, P.Ord, Serialise, PlutusTx.IsData)
+    deriving (Show, Pretty) via LedgerBytes
+```
+
+The use of a `PrivateKey` is the only way to sign transactions. Only the actual user is supposed to have access to this key and, by providing the signature, the transaction content and the public key, any user can make sure that the person that signed this transaction had access to the private key and, therefore, is trustworthy.
+
+#### Signature
+
+> A message with a cryptographic signature.
+
+```haskell
+newtype Signature = Signature { getSignature :: Builtins.ByteString }
+    deriving stock (Eq, Ord, Generic)
+    deriving newtype (P.Eq, P.Ord, Serialise, PlutusTx.IsData, NFData)
+    deriving (Show, Pretty) via LedgerBytes
+```
+
+A signature is a value produced by a function that takes a private key and an arbitrary content (usually a transaction) and returns a byte string that can be verified by only using the public key.
+
+You could think it as an actual signature where the private key is the persons knowledge on how to write the symbols and letters in the correct way, while the content (or transaction) is a document and the public key is a set of signatures from this person used to verify it's validity.
+
+
+#### signedBy
+
+> Check whether the given 'Signature' was signed by the private key corresponding to the given public key.
+
+```haskell
+signedBy :: Signature -> PubKey -> TxId -> Bool
+signedBy (Signature s) (PubKey k) txId =
+    let k' = ED25519.publicKey $ KB.getLedgerBytes k
+        s' = ED25519.signature s
+    in throwCryptoError $ ED25519.verify <$> k' <*> pure (getTxId txId) <*> s' -- TODO: is this what we want
+```
+
+#### signTx
+
+> Sign the hash of a transaction using a private key.
+
+```haskell
+signTx :: TxId -> PrivateKey -> Signature
+signTx (TxId txId) = sign txId
+```
+
+#### sign
+
+> Sign a message using a private key.
+
+```haskell
+sign :: BA.ByteArrayAccess a => a -> PrivateKey -> Signature
+sign  msg (PrivateKey privKey) =
+    let k  = ED25519.secretKey $ KB.getLedgerBytes privKey
+        pk = ED25519.toPublic <$> k
+        salt :: BS.ByteString
+        salt = "" -- TODO: do we need better salt?
+        convert = Signature . BS.pack . BA.unpack
+    in throwCryptoError $ fmap convert (ED25519.sign <$> k <*> pure salt <*> pk <*> pure msg)
+```
+
+#### fromHex
+
+```haskell
+fromHex :: BS.ByteString -> Either String PrivateKey
+fromHex = fmap PrivateKey . KB.fromHex
+```
+
+#### toPubKey
+
+```haskell
+toPublicKey :: PrivateKey -> PubKey
+toPublicKey = PubKey . KB.fromBytes . BS.pack . BA.unpack . ED25519.toPublic . f . KB.bytes . getPrivateKey where
+    f = throwCryptoError . ED25519.secretKey
+```
+
+#### knownPrivateKeys
+
+```haskell
+knownPrivateKeys :: [PrivateKey]
+knownPrivateKeys = [privateKey1, privateKey2, privateKey3, privateKey4, privateKey5, privateKey6, privateKey7, privateKey8, privateKey9, privateKey10]
+```
+
+Arbitrary private keys usually used for testing purposes.
 
 ## [PlutusTx](https://github.com/input-output-hk/plutus/tree/master/plutus-tx/src/PlutusTx)
 
