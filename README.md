@@ -11,9 +11,9 @@ Note: This is still being written and, because of this, a lot of information is 
     * [Contexts](#contexts)
     * [Credential](#credential)
     * [Crypto](#crypto)
-    * [DCert]()
-    * [Examples]()
-    * [Interval]()
+    * [DCert](#dcert)
+    * [Examples](#examples)
+    * [Interval](#interval)
     * [Orphans]()
     * [Scripts]()
     * [Slot]()
@@ -751,6 +751,97 @@ knownPrivateKeys = [privateKey1, privateKey2, privateKey3, privateKey4, privateK
 ```
 
 Arbitrary private keys usually used for testing purposes.
+
+### [DCert](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/DCert.hs)
+
+#### DCert
+
+> A representation of the ledger DCert. Some information is digested, and not included
+
+```haskell
+data DCert
+  = DCertDelegRegKey StakingCredential
+  | DCertDelegDeRegKey StakingCredential
+  | DCertDelegDelegate
+      StakingCredential
+      -- ^ delegator
+      PubKeyHash
+      -- ^ delegatee
+  | -- | A digest of the PoolParams
+    DCertPoolRegister
+      PubKeyHash
+      -- ^ poolId
+      PubKeyHash
+      -- ^ pool VFR
+  | -- | The retiremant certificate and the Epoch N
+    DCertPoolRetire PubKeyHash Integer -- NB: Should be Word64 but we only have Integer on-chain
+  | -- | A really terse Digest
+    DCertGenesis
+  | -- | Another really terse Digest
+    DCertMir
+    deriving stock (Eq, Ord, Show, Generic)
+    deriving anyclass (ToJSON, FromJSON, Serialise, Hashable, NFData)
+```
+
+I don't what this is, feel free to make a pull request if you do.
+
+### [Examples](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Examples.hs)
+
+#### alwaysSucceedingNAryFunction
+
+> Creates a script which has N arguments, and always succeeds.
+
+```haskell
+alwaysSucceedingNAryFunction :: Natural -> SerializedScript
+alwaysSucceedingNAryFunction n = toShort $ toStrict $ serialise $ Scripts.Script $ UPLC.Program () (PLC.defaultVersion ()) (body n)
+    where
+        -- No more arguments! The body can be anything that doesn't fail, so we return `\x . x`
+        body i | i == 0 = UPLC.LamAbs() (UPLC.DeBruijn 0) $ UPLC.Var () (UPLC.DeBruijn 1)
+        -- We're using de Bruijn indices, so we can use the same binder each time!
+        body i = UPLC.LamAbs () (UPLC.DeBruijn 0) $ body (i-1)
+```
+
+#### alwaysFailingNAryFunction
+
+> Creates a script which has N arguments, and always fails.
+
+```haskell
+alwaysFailingNAryFunction :: Natural -> SerializedScript
+alwaysFailingNAryFunction n = toShort $ toStrict $ serialise $ Scripts.Script $ UPLC.Program () (PLC.defaultVersion ()) (body n)
+    where
+        -- No more arguments! The body should be error.
+        body i | i == 0 = UPLC.Error ()
+        -- We're using de Bruijn indices, so we can use the same binder each time!
+        body i = UPLC.LamAbs () (UPLC.DeBruijn 0) $ body (i-1)
+```
+
+### [Interval](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Interval.hs)
+
+#### Interval
+
+> An interval of @a@s.
+>
+> The interval may be either closed or open at either end, meaning
+> that the endpoints may or may not be included in the interval.
+>
+> The interval can also be unbounded on either side.
+
+```haskell
+data Interval a = Interval { ivFrom :: LowerBound a, ivTo :: UpperBound a }
+    deriving stock (Haskell.Eq, Haskell.Ord, Haskell.Show, Generic)
+    deriving anyclass (FromJSON, ToJSON, Serialise, Hashable, NFData)
+```
+
+Because Cardano is a decentralised system and sometimes it may take a while for a transaction to spread, it's very useful to pass deadlines or simmilar arguments in intervals of time instead of periods. `Interval` is a data type that is used to do exactly that.
+
+#### Closure
+
+> Whether a bound is inclusive or not.
+
+```haskell
+type Closure = Bool
+```
+
 
 ## [PlutusTx](https://github.com/input-output-hk/plutus/tree/master/plutus-tx/src/PlutusTx)
 
