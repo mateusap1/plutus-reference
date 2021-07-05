@@ -1,6 +1,8 @@
 # plutus-reference
 A repository with some information I may need to refer later about the plutus lectures
 
+Note: This is still being written and, because of this, a lot of information is still missing and some of it may even be false, so make sure to do your own research when needed and **do not rely on this repository for handling critical data**.
+
 * [Ledger](#ledger)
     * [Ada](#ada)
     * [Address](#address)
@@ -334,6 +336,9 @@ data TxInfo = TxInfo
 
 When validating a transaction inside a contract, it is important to know some information about this transaction, this is what `TxInfo` is used for. In order to make sure, for example, that a token is being minted by someone with permission, the script could verify if any `PubKeyHash` of `txInfoSignatories` is inside the list of allowed users.
 
+`txInfoInputs` is a list of inputs ([`TxInInfo`](#txininfo)), which are basically previous UTxOs (or previous outputs to be more technically correct) that were spent to generate new ones.
+`txInfoOutputs` is a list of newly created outputs ([`TxOut`](#txout)).
+
 #### ScriptContext
 
 ```haskell
@@ -542,11 +547,11 @@ signsTransaction (Signature sig) (PubKey (LedgerBytes pk)) TxInfo{txInfoId=TxId 
     verifySignature pk h sig
 ```
 
-`signsTransaction` makes sure that the given `PubKey` actually produced the given `Signature` by signing thew received `TxInfo`.
+`signsTransaction` makes sure that the given `PubKey` actually produced `Signature` by signing `TxInfo`.
 
-More abstractly you could think of the signature as an actual written signature, the transaction information as an important document (maybe a contract) and the public key as some random person. So your basically checking if this person actually signed the document.
+More abstractly you could think of the signature as an actual written signature, the transaction information as an important document (maybe a contract) and the public key as the person who claims to have signed this document. So you are basically checking if this person actually signed the document.
 
-More technically, every user has a private and public key. A cryptographic signature is a function that takes a private key and an arbitrary content and returns a value (the signature). Because of some mathematical correlation between the private and public key, we can use the public key together with the signature to know if they actually match (the owner of this public key actually signed it). That's what this function is doing.
+More technically, every user has a private and public key. A cryptographic signature is a function that takes a private key and an arbitrary content and returns a value (the signature). Because of some mathematical correlation between the private and public key, we can use the public key together with the signature to know if they actually match (the owner of this public key actually signed it).
 
 
 ## [PlutusTx](https://github.com/input-output-hk/plutus/tree/master/plutus-tx/src/PlutusTx)
