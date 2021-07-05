@@ -9,7 +9,7 @@ Note: This is still being written and, because of this, a lot of information is 
     * [Api](#api)
     * [Bytes](#bytes)
     * [Contexts](#contexts)
-    * [Credential]()
+    * [Credential](#credential)
     * [Crypto]()
     * [DCert]()
     * [Examples]()
@@ -601,6 +601,34 @@ spendsOutput p h i =
 
     in any spendsOutRef (txInfoInputs p)
 ```
+
+### [Credential](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Credential.hs)
+
+#### StakingCredential
+
+> Staking credential used to assign rewards
+
+```haskell
+data StakingCredential
+    = StakingHash Builtins.ByteString
+    | StakingPtr Integer Integer Integer -- NB: The fields should really be Word64 / Natural / Natural, but 'Integer' is our only integral type so we need to use it instead.
+    deriving stock (Eq, Ord, Show, Generic)
+    deriving anyclass (ToJSON, FromJSON, Serialise, Hashable, NFData)
+```
+
+#### Credential
+
+> Credential required to unlock a transaction output
+
+```haskell
+data Credential
+  = PubKeyCredential PubKeyHash -- ^ The transaction that spends this output must be signed by the private key
+  | ScriptCredential ValidatorHash -- ^ The transaction that spends this output must include the validator script and be accepted by the validator.
+    deriving stock (Eq, Ord, Show, Generic)
+    deriving anyclass (ToJSON, FromJSON, Serialise, Hashable, NFData)
+```
+
+`Credential` is used to, whenever you want to consume an UTxO, prove that you actually "own" this output.
 
 ## [PlutusTx](https://github.com/input-output-hk/plutus/tree/master/plutus-tx/src/PlutusTx)
 
