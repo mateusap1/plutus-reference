@@ -7,8 +7,8 @@ Note: This is still being written and, because of this, a lot of information is 
     * [Ada](#ada)
     * [Address](#address)
     * [Api](#api)
-    * [Bytes]()
-    * [Contexts]()
+    * [Bytes](#bytes)
+    * [Contexts](#contexts)
     * [Credential]()
     * [Crypto]()
     * [DCert]()
@@ -553,6 +553,54 @@ More abstractly you could think of the signature as an actual written signature,
 
 More technically, every user has a private and public key. A cryptographic signature is a function that takes a private key and an arbitrary content and returns a value (the signature). Because of some mathematical correlation between the private and public key, we can use the public key together with the signature to know if they actually match (the owner of this public key actually signed it).
 
+#### valueSpent
+
+> Get the total value of inputs spent by this transaction.
+
+```haskell
+valueSpent :: TxInfo -> Value
+valueSpent = foldMap (txOutValue . txInInfoResolved) . txInfoInputs
+```
+
+`valueSpent` goes over each input and, not caring about it's sender, add it together.
+
+#### valueProduced
+
+> Get the total value of outputs produced by this transaction.
+
+```haskell
+valueProduced :: TxInfo -> Value
+valueProduced = foldMap txOutValue . txInfoOutputs
+```
+
+`valueProduced` goes over each output and, not caring about it's sender, add it together. In other words, does the same thing as `valueSpent`, but with outputs.
+
+#### ownCurrencySymbol
+
+> The 'CurrencySymbol' of the current validator script.
+
+```haskell
+ownCurrencySymbol :: ScriptContext -> CurrencySymbol
+ownCurrencySymbol ScriptContext{scriptContextPurpose=Minting cs} = cs
+ownCurrencySymbol _                                              = Builtins.error ()
+```
+
+Given a `ScriptContext`, if it's purpose is `Minting`, returns the currency symbol, otherwise throws an error, as other script purposes don't have any currency sybol.
+
+#### spendsOutput
+
+> Check if the pending transaction spends a specific transaction output (identified by the hash of a transaction and an index into that transactions' outputs)
+
+```haskell
+spendsOutput :: TxInfo -> TxId -> Integer -> Bool
+spendsOutput p h i =
+    let spendsOutRef inp =
+            let outRef = txInInfoOutRef inp
+            in h == txOutRefId outRef
+                && i == txOutRefIdx outRef
+
+    in any spendsOutRef (txInfoInputs p)
+```
 
 ## [PlutusTx](https://github.com/input-output-hk/plutus/tree/master/plutus-tx/src/PlutusTx)
 
