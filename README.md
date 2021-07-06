@@ -783,7 +783,7 @@ data DCert
     deriving anyclass (ToJSON, FromJSON, Serialise, Hashable, NFData)
 ```
 
-I don't what this is, feel free to make a pull request if you do.
+I don't know what this is, feel free to make a pull request if you do.
 
 ### [Examples](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Examples.hs)
 
