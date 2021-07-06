@@ -14,7 +14,7 @@ Note: This is still being written and, because of this, a lot of information is 
     * [DCert](#dcert)
     * [Examples](#examples)
     * [Interval](#interval)
-    * [Orphans]()
+    * [Orphans](#orphans)
     * [Scripts]()
     * [Slot]()
     * [Time]()
@@ -1053,8 +1053,152 @@ after :: Ord a => a -> Interval a -> Bool
 after h (Interval _ t) = upperBound h > t
 ```
 
+### [Orphans](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Orphans.hs)
 
+Nothing here, feel free to contribute!
 
+### [Scripts](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Scripts.hs)
+
+#### Script
+
+> A script on the chain. This is an opaque type as far as the chain is concerned.
+
+```haskell
+newtype Script = Script { unScript :: UPLC.Program UPLC.DeBruijn PLC.DefaultUni PLC.DefaultFun () }
+  deriving stock Generic
+```
+
+#### scriptSize
+
+> The size of a 'Script'. No particular interpretation is given to this, other than that it is proportional to the serialized size of the script.
+
+```haskell
+scriptSize :: Script -> Integer
+scriptSize (Script s) = UPLC.programSize s
+```
+
+#### fromCompiledCode
+
+> Turn a 'CompiledCode' (usually produced by 'compile') into a 'Script' for use with this package.
+
+```haskell
+fromCompiledCode :: CompiledCode a -> Script
+fromCompiledCode = fromPlc . getPlc
+```
+
+#### fromPlc
+
+```haskell
+fromPlc :: UPLC.Program UPLC.NamedDeBruijn PLC.DefaultUni PLC.DefaultFun () -> Script
+fromPlc (UPLC.Program a v t) =
+    let nameless = UPLC.termMapNames UPLC.unNameDeBruijn t
+    in Script $ UPLC.Program a v nameless
+```
+
+#### applyScript
+
+> Given two 'Script's, compute the 'Script' that consists of applying the first to the second.
+
+```haskell
+applyScript :: Script -> Script -> Script
+applyScript (unScript -> s1) (unScript -> s2) = Script $ s1 `UPLC.applyProgram` s2
+```
+
+#### ScriptError
+
+```haskell
+data ScriptError =
+    EvaluationError [Haskell.String] -- ^ Expected behavior of the engine (e.g. user-provided error)
+    | EvaluationException Haskell.String -- ^ Unexpected behavior of the engine (a bug)
+    | MalformedScript Haskell.String -- ^ Script is wrong in some way
+    deriving (Haskell.Show, Haskell.Eq, Generic, NFData)
+    deriving anyclass (ToJSON, FromJSON)
+```
+
+A data type to handle erros that happened inside a script or in the process of creating a script
+
+#### evaluateScript
+
+> Evaluate a script, returning the trace log.
+
+```haskell
+evaluateScript :: forall m . (MonadError ScriptError m) => Script -> m [Haskell.String]
+evaluateScript s = do
+    -- TODO: evaluate the nameless debruijn program directly
+    let namedProgram =
+            let (UPLC.Program a v t) = unScript s
+                named = UPLC.termMapNames (\(UPLC.DeBruijn ix) -> UPLC.NamedDeBruijn "" ix) t
+            in UPLC.Program a v named
+    p <- case PLC.runQuote $ runExceptT @PLC.FreeVariableError $ UPLC.unDeBruijnProgram namedProgram of
+        Right p -> return p
+        Left e  -> throwError $ MalformedScript $ Haskell.show e
+    let (logOut, _tally, result) = evaluateCekTrace p
+    case result of
+        Right _ -> Haskell.pure ()
+        Left errWithCause@(ErrorWithCause err _) -> throwError $ case err of
+            InternalEvaluationError {} -> EvaluationException $ Haskell.show errWithCause
+            UserEvaluationError {}     -> EvaluationError logOut -- TODO fix this error channel fuckery
+    Haskell.pure logOut
+```
+
+#### mkValidatorScript
+
+```haskell
+mkValidatorScript :: CompiledCode (Data -> Data -> Data -> ()) -> Validator
+mkValidatorScript = Validator . fromCompiledCode
+```
+
+Given a compiled validator function (that takes the datum, redeemer and context and throws an error if something fails), returns an object of type `Validator`.
+
+#### unValidatorScript
+
+```haskell
+unValidatorScript :: Validator -> Script
+unValidatorScript = getValidator
+```
+
+#### mkMintingPolicyScript
+
+```haskell
+mkMintingPolicyScript :: CompiledCode (Data -> Data -> ()) -> MintingPolicy
+mkMintingPolicyScript = MintingPolicy . fromCompiledCode
+```
+
+Given a compiled policy script function, returns an object of type `MintingPolicy`.
+
+#### unMintingPolicyScript
+
+```haskell
+
+unMintingPolicyScript :: MintingPolicy -> Script
+unMintingPolicyScript = getMintingPolicy
+```
+
+#### Validator
+
+> 'Validator' is a wrapper around 'Script's which are used as validators in transaction outputs.
+
+```haskell
+newtype Validator = Validator { getValidator :: Script }
+  deriving stock (Generic)
+  deriving newtype (Haskell.Eq, Haskell.Ord, Eq, Ord, Serialise)
+  deriving anyclass (ToJSON, FromJSON, NFData)
+  deriving Pretty via (PrettyShow Validator)
+```
+
+`Validator` is what runs in order to allow a transaction occur. If it thorws an error, the transaction cannot happen
+
+#### Datum
+
+> 'Datum' is a wrapper around 'Data' values which are used as data in transaction outputs.
+
+```haskell
+newtype Datum = Datum { getDatum :: Data  }
+  deriving stock (Generic, Haskell.Show)
+  deriving newtype (Haskell.Eq, Haskell.Ord, Eq, Ord, Serialise, IsData, NFData)
+  deriving anyclass (ToJSON, FromJSON)
+  deriving Pretty via Data
+```
 
 ## [PlutusTx](https://github.com/input-output-hk/plutus/tree/master/plutus-tx/src/PlutusTx)
 
