@@ -834,6 +834,18 @@ data Interval a = Interval { ivFrom :: LowerBound a, ivTo :: UpperBound a }
 
 Because Cardano is a decentralised system and sometimes it may take a while for a transaction to spread, it's very useful to pass deadlines or simmilar arguments in intervals of time instead of periods. `Interval` is a data type that is used to do exactly that.
 
+#### Extended
+
+> A set extended with a positive and negative infinity.
+
+```haskell
+data Extended a = NegInf | Finite a | PosInf
+    deriving stock (Haskell.Eq, Haskell.Ord, Haskell.Show, Generic)
+    deriving anyclass (FromJSON, ToJSON, Serialise, Hashable, NFData)
+```
+
+Extends a value to include infinity
+
 #### Closure
 
 > Whether a bound is inclusive or not.
@@ -841,6 +853,207 @@ Because Cardano is a decentralised system and sometimes it may take a while for 
 ```haskell
 type Closure = Bool
 ```
+
+Given an interval 0 to 10, we can include 0 or exclude it and the same thing goes to 10. For instance if we define ]0, 10] (excluding 0), 0.0001 would be inside the interval, but not 0 it self.
+
+#### UpperBound
+
+> The upper bound of an interval.
+
+```haskell
+data UpperBound a = UpperBound (Extended a) Closure
+    deriving stock (Haskell.Eq, Haskell.Ord, Haskell.Show, Generic)
+    deriving anyclass (FromJSON, ToJSON, Serialise, Hashable, NFData)
+```
+
+A data type for deining upper bounds, it takes an extended value and a closure. The value indicates the bound it self (`Finite 7` or `PosInf` for instance) and the closure indicates if the value is included in the interval.
+
+#### LowerBound
+
+> The lower bound of an interval.
+
+```haskell
+data LowerBound a = LowerBound (Extended a) Closure
+    deriving stock (Haskell.Eq, Haskell.Ord, Haskell.Show, Generic)
+    deriving anyclass (FromJSON, ToJSON, Serialise, Hashable, NFData)
+```
+
+A data type for deining lower bounds
+
+#### strictUpperBound
+
+```haskell
+strictUpperBound :: a -> UpperBound a
+strictUpperBound a = UpperBound (Finite a) False
+```
+
+An `UpperBound` that doesn't include it's value, only what's smaller
+
+#### strictLowerBound
+
+```haskell
+strictLowerBound :: a -> LowerBound a
+strictLowerBound a = LowerBound (Finite a) False
+```
+
+A `LowerBound` that doesn't include it's value, only what's greater
+
+
+#### lowerBound
+
+```haskell
+lowerBound :: a -> LowerBound a
+lowerBound a = LowerBound (Finite a) True
+```
+
+A `LowerBound` that does include it's value together with greater values
+
+#### upperBound
+
+```haskell
+upperBound :: a -> UpperBound a
+upperBound a = UpperBound (Finite a) True
+```
+
+An `UpperBound` that does include it's value together with smaller values
+
+#### interval
+
+> @interval a b@ includes all values that are greater than or equal to @a@ and smaller than or equal to @b@. Therefore it includes @a@ and @b@.
+
+```haskell
+interval :: a -> a -> Interval a
+interval s s' = Interval (lowerBound s) (upperBound s')
+```
+
+Defines an interval from a given lower bound to a given upper bound, including the values themself
+
+#### singleton
+
+```haskell
+singleton :: a -> Interval a
+singleton s = interval s s
+```
+
+Makes an interval representation of a point in time. Because a `singleton` only cares about one value, the upper bound is equal to the lower bound
+
+#### from
+
+> @from a@ is an 'Interval' that includes all values that are greater than or equal to @a@.
+
+```haskell
+from :: a -> Interval a
+from s = Interval (lowerBound s) (UpperBound PosInf True)
+```
+
+Defines an interval that goes from the given value to infinity. This means that, given a value A, any other value greater or equal to A is part of this interval
+
+#### to
+
+> @to a@ is an 'Interval' that includes all values that are smaller than @a@.
+
+```haskell
+to :: a -> Interval a
+to s = Interval (LowerBound NegInf True) (upperBound s)
+```
+
+Defines an interval that goes from the given value to negative infinity. This means that, given a value A, any other value less or equal to A is part of this interval
+
+#### always
+
+> An 'Interval' that covers every slot.
+
+```haskell
+always :: Interval a
+always = Interval (LowerBound NegInf True) (UpperBound PosInf True)
+```
+
+
+#### never
+
+> An 'Interval' that is empty.
+
+```haskell
+never :: Interval a
+never = Interval (LowerBound PosInf True) (UpperBound NegInf True)
+```
+
+#### member
+
+> Check whether a value is in an interval.
+
+```haskell
+member :: Ord a => a -> Interval a -> Bool
+member a i = i `contains` singleton a
+```
+
+#### overlaps
+
+> Check whether two intervals overlap, that is, whether there is a value that is a member of both intervals.
+
+```haskell
+overlaps :: Ord a => Interval a -> Interval a -> Bool
+overlaps l r = not $ isEmpty (l `intersection` r)
+```
+
+#### intersection
+
+> 'intersection a b' is the largest interval that is contained in 'a' and in 'b', if it exists.
+
+```haskell
+intersection :: Ord a => Interval a -> Interval a -> Interval a
+intersection (Interval l1 h1) (Interval l2 h2) = Interval (max l1 l2) (min h1 h2)
+```
+
+#### hull
+
+> 'hull a b' is the smallest interval containing 'a' and 'b'.
+
+```haskell
+hull :: Ord a => Interval a -> Interval a -> Interval a
+hull (Interval l1 h1) (Interval l2 h2) = Interval (min l1 l2) (max h1 h2)
+```
+
+#### contains
+
+> @a `contains` b@ is true if the 'Interval' @b@ is entirely contained in @a@. That is, @a `contains` b@ if for every entry @s@, if @member s b@ then @member s a@.
+
+```haskell
+contains :: Ord a => Interval a -> Interval a -> Bool
+contains (Interval l1 h1) (Interval l2 h2) = l1 <= l2 && h2 <= h1
+```
+
+#### isEmpty
+
+> Check if an 'Interval' is empty.
+
+```haskell
+isEmpty :: Ord a => Interval a -> Bool
+isEmpty (Interval (LowerBound v1 in1) (UpperBound v2 in2)) = case v1 `compare` v2 of
+    LT -> False
+    GT -> True
+    EQ -> not (in1 && in2)
+```
+
+#### before
+
+> Check if a value is earlier than the beginning of an 'Interval'.
+
+```haskell
+before :: Ord a => a -> Interval a -> Bool
+before h (Interval f _) = lowerBound h < f
+```
+
+#### after
+
+> Check if a value is later than the end of a 'Interval'.
+
+```haskell
+after :: Ord a => a -> Interval a -> Bool
+after h (Interval _ t) = upperBound h > t
+```
+
+
 
 
 ## [PlutusTx](https://github.com/input-output-hk/plutus/tree/master/plutus-tx/src/PlutusTx)
