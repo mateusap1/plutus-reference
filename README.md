@@ -1066,6 +1066,25 @@ Nothing here, feel free to contribute!
 ```haskell
 newtype Script = Script { unScript :: UPLC.Program UPLC.DeBruijn PLC.DefaultUni PLC.DefaultFun () }
   deriving stock Generic
+
+instance Eq Script where
+    {-# INLINABLE (==) #-}
+    a == b = BSL.toStrict (serialise a) == BSL.toStrict (serialise b)
+
+instance Haskell.Eq Script where
+    a == b = BSL.toStrict (serialise a) == BSL.toStrict (serialise b)
+
+instance Ord Script where
+    {-# INLINABLE compare #-}
+    a `compare` b = BSL.toStrict (serialise a) `compare` BSL.toStrict (serialise b)
+
+instance Haskell.Ord Script where
+    a `compare` b = BSL.toStrict (serialise a) `compare` BSL.toStrict (serialise b)
+
+instance Haskell.Show Script where
+    showsPrec _ _ = Haskell.showString "<Script>"
+
+instance NFData Script
 ```
 
 #### scriptSize
@@ -1184,9 +1203,18 @@ newtype Validator = Validator { getValidator :: Script }
   deriving newtype (Haskell.Eq, Haskell.Ord, Eq, Ord, Serialise)
   deriving anyclass (ToJSON, FromJSON, NFData)
   deriving Pretty via (PrettyShow Validator)
+
+instance Haskell.Show Validator where
+    show = const "Validator { <script> }"
+
+instance BA.ByteArrayAccess Validator where
+    length =
+        BA.length . BSL.toStrict . serialise
+    withByteArray =
+        BA.withByteArray . BSL.toStrict . serialise
 ```
 
-`Validator` is what runs in order to allow a transaction occur. If it thorws an error, the transaction cannot happen
+`Validator` is a type that represents our validator script (a function that runs and either returns void or throws an error).
 
 #### Datum
 
@@ -1198,7 +1226,37 @@ newtype Datum = Datum { getDatum :: Data  }
   deriving newtype (Haskell.Eq, Haskell.Ord, Eq, Ord, Serialise, IsData, NFData)
   deriving anyclass (ToJSON, FromJSON)
   deriving Pretty via Data
+
+instance BA.ByteArrayAccess Datum where
+    length =
+        BA.length . BSL.toStrict . serialise
+    withByteArray =
+        BA.withByteArray . BSL.toStrict . serialise
 ```
+
+`Datum` is a type that represents the dat that is stored inside script outputs. If we make a comparsion to traditional applications we could compare it (not very accuratily, but it may help) to a database, though they have a lot of differences specially when we talk about their architeture.
+
+#### Redeemer
+
+> 'Redeemer' is a wrapper around 'Data' values that are used as redeemers in transaction inputs.
+
+```haskell
+newtype Redeemer = Redeemer { getRedeemer :: Data }
+  deriving stock (Generic, Haskell.Show)
+  deriving newtype (Haskell.Eq, Haskell.Ord, Eq, Ord, Serialise, NFData)
+  deriving anyclass (ToJSON, FromJSON)
+
+instance Pretty Redeemer where
+    pretty (Redeemer dat) = "Redeemer:" <+> pretty dat
+
+instance BA.ByteArrayAccess Redeemer where
+    length =
+        BA.length . BSL.toStrict . serialise
+    withByteArray =
+        BA.withByteArray . BSL.toStrict . serialise
+```
+
+Differently from normal transactions, script transactions don't require the sender signature, but instead a type called `Redeemer`. So, for instance, if your script (need continuation) 
 
 ### [Slot](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Slot.hs)
 
