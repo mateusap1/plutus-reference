@@ -1256,7 +1256,203 @@ instance BA.ByteArrayAccess Redeemer where
         BA.withByteArray . BSL.toStrict . serialise
 ```
 
-Differently from normal transactions, script transactions don't require the sender signature, but instead a type called `Redeemer`. So, for instance, if your script (need continuation) 
+Differently from normal transactions, script transactions don't require the sender signature, but instead a type called `Redeemer`. This redeemer will be given by the person trying to consume the script UTxO and can be analyzed by the validator in order to decide if the user is or is not allowed to consume it.
+
+#### MintingPolicy
+
+> -- | 'MintingPolicy' is a wrapper around 'Script's which are used as validators for minting constraints.
+
+```haskell
+newtype MintingPolicy = MintingPolicy { getMintingPolicy :: Script }
+  deriving stock (Generic)
+  deriving newtype (Haskell.Eq, Haskell.Ord, Eq, Ord, Serialise)
+  deriving anyclass (ToJSON, FromJSON, NFData)
+  deriving Pretty via (PrettyShow MintingPolicy)
+
+instance Haskell.Show MintingPolicy where
+    show = const "MintingPolicy { <script> }"
+
+instance BA.ByteArrayAccess MintingPolicy where
+    length =
+        BA.length . BSL.toStrict . serialise
+    withByteArray =
+        BA.withByteArray . BSL.toStrict . serialise
+```
+
+A reference to the script that runs when someone is trying to mint a token. This script works just like the other ones, but instead of verifying if the user can consume the script UTxO, verifies if he can mint a token.
+
+#### ValidatorHash
+
+> Script runtime representation of a @Digest SHA256@.
+
+```haskell
+newtype ValidatorHash =
+    ValidatorHash Builtins.ByteString
+    deriving (IsString, Haskell.Show, Serialise, Pretty) via LedgerBytes
+    deriving stock (Generic)
+    deriving newtype (Haskell.Eq, Haskell.Ord, Eq, Ord, Hashable, IsData)
+    deriving anyclass (FromJSON, ToJSON, ToJSONKey, FromJSONKey, NFData)
+```
+
+#### validatorHash
+
+```haskell
+validatorHash :: Validator -> ValidatorHash
+validatorHash vl = ValidatorHash $ BA.convert h' where
+    h :: Digest SHA256 = hash $ BSL.toStrict e
+    h' :: Digest SHA256 = hash h
+    e = serialise vl
+```
+
+#### DatumHash
+
+> Script runtime representation of a @Digest SHA256@.
+
+```haskell
+newtype DatumHash =
+    DatumHash Builtins.ByteString
+    deriving (IsString, Haskell.Show, Serialise, Pretty) via LedgerBytes
+    deriving stock (Generic)
+    deriving newtype (Haskell.Eq, Haskell.Ord, Eq, Ord, Hashable, IsData, NFData)
+    deriving anyclass (FromJSON, ToJSON, ToJSONKey, FromJSONKey)
+```
+
+#### datumHash
+```haskell
+datumHash :: Datum -> DatumHash
+datumHash = DatumHash . Builtins.sha2_256 . BA.convert
+```
+
+#### RedeemerHash
+
+> Script runtime representation of a @Digest SHA256@.
+
+```haskell
+newtype RedeemerHash =
+    RedeemerHash Builtins.ByteString
+    deriving (IsString, Haskell.Show, Serialise, Pretty) via LedgerBytes
+    deriving stock (Generic)
+    deriving newtype (Haskell.Eq, Haskell.Ord, Eq, Ord, Hashable, IsData)
+    deriving anyclass (FromJSON, ToJSON, ToJSONKey, FromJSONKey)
+```
+
+#### redeemerHash
+
+```haskell
+redeemerHash :: Redeemer -> RedeemerHash
+redeemerHash = RedeemerHash . Builtins.sha2_256 . BA.convert
+```
+
+#### MintingPolicyHash
+
+> Script runtime representation of a @Digest SHA256@.
+
+```haskell
+newtype MintingPolicyHash =
+    MintingPolicyHash Builtins.ByteString
+    deriving (IsString, Haskell.Show, Serialise, Pretty) via LedgerBytes
+    deriving stock (Generic)
+    deriving newtype (Haskell.Eq, Haskell.Ord, Eq, Ord, Hashable, IsData)
+    deriving anyclass (FromJSON, ToJSON, ToJSONKey, FromJSONKey)
+```
+
+#### mintingPolicyHash
+
+```haskell
+mintingPolicyHash :: MintingPolicy -> MintingPolicyHash
+mintingPolicyHash vl = MintingPolicyHash $ BA.convert h' where
+    h :: Digest SHA256 = hash $ BSL.toStrict e
+    h' :: Digest SHA256 = hash h
+    e = serialise vl
+```
+
+#### Context
+
+> Information about the state of the blockchain and about the transaction that is currently being validated, represented as a value in 'Data'.
+
+```haskell
+newtype Context = Context Data
+    deriving stock (Generic, Haskell.Show)
+    deriving anyclass (ToJSON, FromJSON)
+```
+
+#### applyValidator
+
+> Apply a 'Validator' to its 'Context', 'Datum', and 'Redeemer'.
+
+```haskell
+applyValidator
+    :: Context
+    -> Validator
+    -> Datum
+    -> Redeemer
+    -> Script
+applyValidator (Context valData) (Validator validator) (Datum datum) (Redeemer redeemer) =
+    ((validator `applyScript` (fromCompiledCode $ liftCode datum)) `applyScript` (fromCompiledCode $ liftCode redeemer)) `applyScript` (fromCompiledCode $ liftCode valData)
+```
+
+#### runScript
+
+> Evaluate a 'Validator' with its 'Context', 'Datum', and 'Redeemer', returning the log.
+
+```haskell
+runScript
+    :: (MonadError ScriptError m)
+    => Context
+    -> Validator
+    -> Datum
+    -> Redeemer
+    -> m [Haskell.String]
+runScript context validator datum redeemer = do
+    evaluateScript (applyValidator context validator datum redeemer)
+```
+
+#### applyMintingPolicy
+
+> Apply 'MintingPolicy' to its 'Context' and 'Redeemer'.
+
+```haskell
+applyMintingPolicyScript
+    :: Context
+    -> MintingPolicy
+    -> Redeemer
+    -> Script
+applyMintingPolicyScript (Context valData) (MintingPolicy validator) (Redeemer red) =
+    (validator `applyScript` (fromCompiledCode $ liftCode red)) `applyScript` (fromCompiledCode $ liftCode valData)
+```
+
+#### runMintingPolicyScript
+
+> Evaluate a 'MintingPolicy' with its 'Context' and 'Redeemer', returning the log.
+
+```haskell
+runMintingPolicyScript
+    :: (MonadError ScriptError m)
+    => Context
+    -> MintingPolicy
+    -> Redeemer
+    -> m [Haskell.String]
+runMintingPolicyScript context mps red = do
+    evaluateScript (applyMintingPolicyScript context mps red)
+```
+
+#### unitDatum
+
+> @()@ as a datum.
+
+```haskell
+unitDatum :: Datum
+unitDatum = Datum $ toData ()
+```
+
+#### unitRedeemer
+
+> @()@ as a redeemer.
+
+```haskell
+unitRedeemer :: Redeemer
+unitRedeemer = Redeemer $ toData ()
+```
 
 ### [Slot](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Slot.hs)
 
