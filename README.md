@@ -1456,7 +1456,119 @@ unitRedeemer = Redeemer $ toData ()
 
 ### [Slot](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Slot.hs)
 
-Nothing here yet, feel free to contribute
+#### Slot
+
+> The slot number. This is a good proxy for time, since on the Cardano blockchain slots pass at a constant rate.
+
+```haskell
+newtype Slot = Slot { getSlot :: Integer }
+    deriving stock (Haskell.Eq, Haskell.Ord, Haskell.Show, Generic)
+    deriving anyclass (FromJSON, FromJSONKey, ToJSON, ToJSONKey, NFData)
+    deriving newtype (AdditiveSemigroup, AdditiveMonoid, AdditiveGroup, Eq, Ord, Enum, PlutusTx.IsData)
+    deriving newtype (Haskell.Num, Haskell.Enum, Haskell.Real, Haskell.Integral, Serialise, Hashable)
+
+makeLift ''Slot
+
+instance Pretty Slot where
+    pretty (Slot i) = "Slot" <+> pretty i
+
+instance Pretty (Interval Slot) where
+    pretty (Interval l h) = pretty l <+> comma <+> pretty h
+```
+
+#### SlotRange
+
+> An 'Interval' of 'Slot's.
+
+```haskell
+type SlotRange = Interval Slot
+```
+
+#### width
+
+> Number of 'Slot's covered by the interval, if finite. @width (from x) == Nothing@.
+
+```haskell
+width :: SlotRange -> Maybe Integer
+width (Interval (LowerBound (Finite (Slot s1)) in1) (UpperBound (Finite (Slot s2)) in2)) =
+    let lowestValue = if in1 then s1 else s1 + 1
+        highestValue = if in2 then s2 else s2 - 1
+    in if lowestValue <= highestValue
+    -- +1 avoids fencepost error: width of [2,4] is 3.
+    then Just $ (highestValue - lowestValue) + 1
+    -- low > high, i.e. empty interval
+    else Nothing
+-- Infinity is involved!
+width _ = Nothing
+```
+
+#### DeffiMiliSeconds
+
+> This is a length of time, as measured by a number of milliseconds.
+
+```haskell
+newtype DiffMilliSeconds = DiffMilliSeconds Integer
+  deriving stock (Haskell.Eq, Haskell.Ord, Haskell.Show, Generic)
+  deriving anyclass (FromJSON, FromJSONKey, ToJSON, ToJSONKey, NFData)
+  deriving newtype (Haskell.Num, AdditiveSemigroup, AdditiveMonoid, AdditiveGroup, Haskell.Enum, Eq, Ord, Haskell.Real, Haskell.Integral, Serialise, Hashable, PlutusTx.IsData)
+
+makeLift ''DiffMilliSeconds
+```
+
+#### POSIXTime
+
+> POSIX time is measured as the number of milliseconds since 1970-01-01T00:00:00Z
+
+```haskell
+newtype POSIXTime = POSIXTime { getPOSIXTime :: Integer }
+  deriving stock (Haskell.Eq, Haskell.Ord, Haskell.Show, Generic)
+  deriving anyclass (FromJSONKey, ToJSONKey, NFData)
+  deriving newtype (AdditiveSemigroup, AdditiveMonoid, AdditiveGroup, Eq, Ord, Enum, PlutusTx.IsData)
+  deriving newtype (Haskell.Num, Haskell.Enum, Haskell.Real, Haskell.Integral, Serialise, Hashable)
+```
+
+#### FromJSON
+
+> Custom `FromJSON` instance which allows to parse a JSON number to a 'POSIXTime' value. The parsed JSON value MUST be an 'Integer' or else the parsing fails.
+
+```haskell
+instance FromJSON POSIXTime where
+  parseJSON v@(Number n) =
+      either (\_ -> prependFailure "parsing POSIXTime failed, " (typeMismatch "Integer" v))
+             (return . POSIXTime)
+             (floatingOrInteger n :: Either Haskell.Double Integer)
+  parseJSON invalid =
+      prependFailure "parsing POSIXTime failed, " (typeMismatch "Number" invalid)
+```
+
+#### ToJSON
+
+> Custom 'ToJSON' instance which allows to simply convert a 'POSIXTime' value to a JSON number.
+
+```haskell
+instance ToJSON POSIXTime where
+  toJSON (POSIXTime n) = Number $ scientific n 0
+  
+makeLift ''POSIXTime
+```
+
+#### POSIXTimeRange
+
+> An 'Interval' of 'POSIXTime's.
+
+```haskell
+type POSIXTimeRange = Interval POSIXTime
+```
+
+#### fromMilliSecond
+
+> Simple conversion from 'DiffMilliSeconds' to 'POSIXTime'.
+
+```haskell
+{-# INLINABLE fromMilliSeconds #-}
+fromMilliSeconds :: DiffMilliSeconds -> POSIXTime
+fromMilliSeconds (DiffMilliSeconds s) = POSIXTime s
+```
 
 ### [Time](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Time.hs)
 
