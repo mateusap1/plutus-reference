@@ -1502,6 +1502,8 @@ width (Interval (LowerBound (Finite (Slot s1)) in1) (UpperBound (Finite (Slot s2
 width _ = Nothing
 ```
 
+### [Time](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Time.hs)
+
 #### DeffiMiliSeconds
 
 > This is a length of time, as measured by a number of milliseconds.
@@ -1569,10 +1571,6 @@ type POSIXTimeRange = Interval POSIXTime
 fromMilliSeconds :: DiffMilliSeconds -> POSIXTime
 fromMilliSeconds (DiffMilliSeconds s) = POSIXTime s
 ```
-
-### [Time](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Time.hs)
-
-Nothing here yet, feel free to contribute
 
 ### [Tx](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Tx.hs)
 
