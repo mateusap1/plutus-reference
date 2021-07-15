@@ -1574,8 +1574,532 @@ fromMilliSeconds (DiffMilliSeconds s) = POSIXTime s
 
 ### [Tx](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Tx.hs)
 
-Nothing here yet, feel free to contribute
+#### Tx
 
+> A transaction, including witnesses for its inputs.
+
+```haskell
+data Tx = Tx {
+    txInputs      :: Set.Set TxIn,
+    -- ^ The inputs to this transaction.
+    txCollateral  :: Set.Set TxIn,
+    -- ^ The collateral inputs to cover the fees in case validation of the transaction fails.
+    txOutputs     :: [TxOut],
+    -- ^ The outputs of this transaction, ordered so they can be referenced by index.
+    txMint        :: !Value,
+    -- ^ The 'Value' minted by this transaction.
+    txFee         :: !Value,
+    -- ^ The fee for this transaction.
+    txValidRange  :: !SlotRange,
+    -- ^ The 'SlotRange' during which this transaction may be validated.
+    txMintScripts :: Set.Set MintingPolicy,
+    -- ^ The scripts that must be run to check minting conditions.
+    txSignatures  :: Map PubKey Signature,
+    -- ^ Signatures of this transaction.
+    txRedeemers   :: Redeemers,
+    -- ^ Redeemers of the minting scripts.
+    txData        :: Map DatumHash Datum
+    -- ^ Datum objects recorded on this transaction.
+    } deriving stock (Show, Eq, Generic)
+      deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
+```
+
+#### inputs
+
+> The inputs of a transaction.
+
+```haskell
+inputs :: Lens' Tx (Set.Set TxIn)
+inputs = lens g s where
+    g = txInputs
+    s tx i = tx { txInputs = i }
+```
+
+#### collateralInputs
+
+> The collateral inputs of a transaction for paying fees when validating the transaction fails.
+
+```haskell
+collateralInputs :: Lens' Tx (Set.Set TxIn)
+collateralInputs = lens g s where
+    g = txCollateral
+    s tx i = tx { txCollateral = i }
+```
+
+#### outputs
+
+> The outputs of a transaction.
+
+```haskell
+outputs :: Lens' Tx [TxOut]
+outputs = lens g s where
+    g = txOutputs
+    s tx o = tx { txOutputs = o }
+```
+
+#### validRange
+
+> The validity range of a transaction.
+
+```haskell
+validRange :: Lens' Tx SlotRange
+validRange = lens g s where
+    g = txValidRange
+    s tx o = tx { txValidRange = o }
+```
+
+#### signatures
+
+```haskell
+signatures :: Lens' Tx (Map PubKey Signature)
+signatures = lens g s where
+    g = txSignatures
+    s tx sig = tx { txSignatures = sig }
+```
+
+#### fee
+
+```haskell
+fee :: Lens' Tx Value
+fee = lens g s where
+    g = txFee
+    s tx v = tx { txFee = v }
+```
+
+#### mint
+
+```haskell
+mint :: Lens' Tx Value
+mint = lens g s where
+    g = txMint
+    s tx v = tx { txMint = v }
+```
+
+#### mintScripts
+
+```haskell
+mintScripts :: Lens' Tx (Set.Set MintingPolicy)
+mintScripts = lens g s where
+    g = txMintScripts
+    s tx fs = tx { txMintScripts = fs }
+```
+
+
+#### redeemers
+
+```haskell
+redeemers :: Lens' Tx Redeemers
+redeemers = lens g s where
+    g = txRedeemers
+    s tx reds = tx { txRedeemers = reds }
+```
+
+#### datumWitnesses
+
+```haskell
+datumWitnesses :: Lens' Tx (Map DatumHash Datum)
+datumWitnesses = lens g s where
+    g = txData
+    s tx dat = tx { txData = dat }
+```
+
+#### redeemers
+
+```haskell
+redeemers :: Lens' Tx Redeemers
+redeemers = lens g s where
+    g = txRedeemers
+    s tx reds = tx { txRedeemers = reds }
+```
+
+#### lookupSignature
+
+```haskell
+lookupSignature :: PubKey -> Tx -> Maybe Signature
+lookupSignature s Tx{txSignatures} = Map.lookup s txSignatures
+```
+
+#### lookupDatum
+
+```haskell
+lookupDatum :: Tx -> DatumHash -> Maybe Datum
+lookupDatum Tx{txData} h = Map.lookup h txData
+```
+
+#### lookupRedeemer
+
+```haskell
+lookupRedeemer :: Tx -> RedeemerPtr -> Maybe Redeemer
+lookupRedeemer tx p = Map.lookup p (txRedeemers tx)
+```
+
+#### validValuesTx
+
+> Check that all values in a transaction are non-negative.
+
+```haskell
+validValuesTx :: Tx -> Bool
+validValuesTx Tx{..}
+  = all (nonNegative . txOutValue) txOutputs  && nonNegative txFee
+    where
+      nonNegative i = V.geq i mempty
+```
+
+#### TxStripped
+
+> A transaction without witnesses for its inputs.
+
+```haskell
+data TxStripped = TxStripped {
+    txStrippedInputs  :: Set.Set TxOutRef,
+    -- ^ The inputs to this transaction, as transaction output references only.
+    txStrippedOutputs :: [TxOut],
+    -- ^ The outputs of this transation.
+    txStrippedMint    :: !Value,
+    -- ^ The 'Value' minted by this transaction.
+    txStrippedFee     :: !Value
+    -- ^ The fee for this transaction.
+    } deriving (Show, Eq, Generic, Serialise)
+```
+
+#### strip
+
+```haskell
+strip :: Tx -> TxStripped
+strip Tx{..} = TxStripped i txOutputs txMint txFee where
+    i = Set.map txInRef txInputs
+```
+
+#### txId
+
+> Compute the id of a transaction.
+
+```haskell
+txId :: Tx -> TxId
+-- Double hash of a transaction, excluding its witnesses.
+txId tx = TxId $ BA.convert h' where
+    h :: Digest SHA256
+    h = hash $ Write.toStrictByteString $ encode $ strip tx
+    h' :: Digest SHA256
+    h' = hash h
+```
+
+#### ScriptTag
+
+> A tag indicating the type of script that we are pointing to.
+> **NOTE:** Cert/Reward are not supported right now.
+
+```haskell
+data ScriptTag = Spend | Mint | Cert | Reward
+    deriving stock (Show, Eq, Ord, Generic)
+    deriving anyclass (Serialise, ToJSON, FromJSON, NFData)
+```
+
+#### RedeemerPtr
+
+> A redeemer pointer is a pair of a script type tag t and an index i, picking out the ith script of type t in the transaction.
+
+```haskell
+data RedeemerPtr = RedeemerPtr ScriptTag Integer
+    deriving stock (Show, Eq, Ord, Generic)
+    deriving anyclass (Serialise, ToJSON, FromJSON, ToJSONKey, FromJSONKey, NFData)
+```
+
+#### Redeemers
+
+```haskell
+type Redeemers = Map RedeemerPtr Redeemer
+```
+
+#### TxOutRef
+
+> A reference to a transaction output. This is a pair of a transaction reference, and an index indicating which of the outputs of that transaction we are referring to.
+
+```haskell
+data TxOutRef = TxOutRef {
+    txOutRefId  :: TxId,
+    txOutRefIdx :: Integer -- ^ Index into the referenced transaction's outputs
+    }
+    deriving stock (Show, Eq, Ord, Generic)
+    deriving anyclass (Serialise, ToJSON, FromJSON, ToJSONKey, FromJSONKey, NFData)
+```
+
+#### txOutRefs
+
+> A list of a transaction's outputs paired with a 'TxOutRef's referring to them.
+
+```haskell
+txOutRefs :: Tx -> [(TxOut, TxOutRef)]
+txOutRefs t = mkOut <$> zip [0..] (txOutputs t) where
+    mkOut (i, o) = (o, TxOutRef (txId t) i)
+```
+
+#### TxInType
+
+> The type of a transaction input.
+
+```haskell
+data TxInType =
+      -- TODO: these should all be hashes, with the validators and data segregated to the side
+      ConsumeScriptAddress !Validator !Redeemer !Datum -- ^ A transaction input that consumes a script address with the given validator, redeemer, and datum.
+    | ConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
+    deriving stock (Show, Eq, Ord, Generic)
+    deriving anyclass (Serialise, ToJSON, FromJSON, NFData)
+```
+
+#### TxIn
+
+> A transaction input, consisting of a transaction output reference and an input type.
+
+```haskell
+data TxIn = TxIn {
+    txInRef  :: !TxOutRef,
+    txInType :: Maybe TxInType
+    }
+    deriving stock (Show, Eq, Ord, Generic)
+    deriving anyclass (Serialise, ToJSON, FromJSON, NFData)
+```
+
+#### inRef
+
+> The 'TxOutRef' spent by a transaction input.
+
+```haskell
+inRef :: Lens' TxIn TxOutRef
+inRef = lens txInRef s where
+    s txi r = txi { txInRef = r }
+```
+
+#### inType
+
+> The type of a transaction input.
+
+```haskell
+inType :: Lens' TxIn (Maybe TxInType)
+inType = lens txInType s where
+    s txi t = txi { txInType = t }
+```
+
+#### inScripts
+
+> Validator, redeemer, and data scripts of a transaction input that spends a "pay to script" output.
+
+```haskell
+inScripts :: TxIn -> Maybe (Validator, Redeemer, Datum)
+inScripts TxIn{ txInType = t } = case t of
+    Just (ConsumeScriptAddress v r d) -> Just (v, r, d)
+    Just ConsumePublicKeyAddress      -> Nothing
+    Nothing                           -> Nothing
+```
+
+#### pubKeyTxIn
+
+> A transaction input that spends a "pay to public key" output, given the witness.
+
+```haskell
+pubKeyTxIn :: TxOutRef -> TxIn
+pubKeyTxIn r = TxIn r (Just ConsumePublicKeyAddress)
+```
+
+#### scriptTxIn
+
+> A transaction input that spends a "pay to script" output, given witnesses.
+
+```haskell
+scriptTxIn :: TxOutRef -> Validator -> Redeemer -> Datum -> TxIn
+scriptTxIn ref v r d = TxIn ref . Just $ ConsumeScriptAddress v r d
+```
+
+#### pubKeyTxIns
+
+> Filter to get only the pubkey inputs.
+
+```haskell
+pubKeyTxIns :: Fold (Set.Set TxIn) TxIn
+pubKeyTxIns = folding (Set.filter (\TxIn{ txInType = t } -> t == Just ConsumePublicKeyAddress))
+```
+
+#### scriptTxIns
+
+> Filter to get only the script inputs.
+
+```haskell
+scriptTxIns :: Fold (Set.Set TxIn) TxIn
+scriptTxIns = folding . Set.filter $ \case
+    TxIn{ txInType = Just ConsumeScriptAddress{} } -> True
+    _                                              -> False
+```
+
+#### TxOut
+
+> A transaction output, consisting of a target address, a value, and optionally a datum hash.
+
+```haskell
+data TxOut = TxOut {
+    txOutAddress   :: Address,
+    txOutValue     :: Value,
+    txOutDatumHash :: Maybe DatumHash
+    }
+    deriving stock (Show, Eq, Generic)
+    deriving anyclass (Serialise, ToJSON, FromJSON, NFData)
+```
+
+#### txOutDatum
+
+> The datum attached to a 'TxOut', if there is one.
+
+```haskell
+txOutDatum :: TxOut -> Maybe DatumHash
+txOutDatum TxOut{txOutDatumHash} = txOutDatumHash
+```
+
+#### txOutPubKey
+
+> The public key attached to a 'TxOut', if there is one.
+
+```haskell
+txOutPubKey :: TxOut -> Maybe PubKeyHash
+txOutPubKey TxOut{txOutAddress} = toPubKeyHash txOutAddress
+```
+
+#### outAddress
+
+> The address of a transaction output.
+
+```haskell
+outAddress :: Lens' TxOut Address
+outAddress = lens txOutAddress s where
+    s tx a = tx { txOutAddress = a }
+```
+
+#### outValue
+
+> The value of a transaction output.
+
+```haskell
+outValue :: Lens' TxOut Value
+outValue = lens txOutValue s where
+    s tx v = tx { txOutValue = v }
+```
+
+#### isPubKeyOut
+
+> Whether the output is a pay-to-pubkey output.
+
+```haskell
+isPubKeyOut :: TxOut -> Bool
+isPubKeyOut = isJust . txOutPubKey
+```
+
+#### isPayToScriptOut
+
+> Whether the output is a pay-to-script output.
+
+```haskell
+isPayToScriptOut :: TxOut -> Bool
+isPayToScriptOut = isJust . txOutDatum
+```
+
+#### TxOutTx
+
+> A 'TxOut' along with the 'Tx' it comes from, which may have additional information e.g. the full data script that goes with the 'TxOut'.
+
+```haskell
+data TxOutTx = TxOutTx { txOutTxTx :: Tx, txOutTxOut :: TxOut }
+    deriving stock (Show, Eq, Generic)
+    deriving anyclass (Serialise, ToJSON, FromJSON)
+```
+
+#### txOutTxDatum
+
+```haskell
+txOutTxDatum :: TxOutTx -> Maybe Datum
+txOutTxDatum (TxOutTx tx out) = txOutDatum out >>= lookupDatum tx
+```
+
+#### scriptTxOut'
+
+> Create a transaction output locked by a validator script hash with the given data script attached.
+
+```haskell
+scriptTxOut' :: Value -> Address -> Datum -> TxOut
+scriptTxOut' v a ds = TxOut a v (Just (datumHash ds))
+```
+
+#### scriptTxOut
+
+> Create a transaction output locked by a validator script and with the given data script attached.
+
+```haskell
+scriptTxOut :: Value -> Validator -> Datum -> TxOut
+scriptTxOut v vs = scriptTxOut' v (scriptAddress vs)
+```
+
+#### pubKeyTxOut
+
+> Create a transaction output locked by a public key.
+
+```haskell
+pubKeyTxOut :: Value -> PubKey -> TxOut
+pubKeyTxOut v pk = TxOut (pubKeyAddress pk) v Nothing
+```
+
+#### pubKeyHashTxOut
+
+> Create a transaction output locked by a public key.
+
+```haskell
+pubKeyHashTxOut :: Value -> PubKeyHash -> TxOut
+pubKeyHashTxOut v pkh = TxOut (pubKeyHashAddress pkh) v Nothing
+```
+
+#### unspentOutputsTx
+
+> The unspent outputs of a transaction.
+
+```haskell
+unspentOutputsTx :: Tx -> Map TxOutRef TxOut
+unspentOutputsTx t = Map.fromList $ fmap f $ zip [0..] $ txOutputs t where
+    f (idx, o) = (TxOutRef (txId t) idx, o)
+```
+
+#### spentOutputs
+
+> The transaction output references consumed by a transaction.
+
+```haskell
+spentOutputs :: Tx -> Set.Set TxOutRef
+spentOutputs = Set.map txInRef . txInputs
+```
+
+#### updateUtxo
+
+> Update a map of unspent transaction outputs and signatures based on the inputs and outputs of a transaction.
+
+```haskell
+updateUtxo :: Tx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
+updateUtxo tx unspent = (unspent `Map.withoutKeys` spentOutputs tx) `Map.union` unspentOutputsTx tx
+```
+
+#### updateUtxoCollateral
+
+> Update a map of unspent transaction outputs and signatures for a failed transaction using its collateral inputs.
+
+```haskell
+updateUtxoCollateral :: Tx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
+updateUtxoCollateral tx unspent = unspent `Map.withoutKeys` (Set.map txInRef . txCollateral $ tx)
+```
+
+#### addSignature
+
+> Sign the transaction with a 'PrivateKey' and add the signature to the transaction's list of signatures.
+
+```haskell
+addSignature :: PrivateKey -> Tx -> Tx
+addSignature privK tx = tx & signatures . at pubK ?~ sig where
+    sig = signTx (txId tx) privK
+    pubK = toPublicKey privK
+```
 
 ### [TxId](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/TxId.hs)
 
