@@ -2148,13 +2148,14 @@ newtype TxId = TxId { getTxId :: BS.ByteString }
 #### CurrencySymbol
 
 ```haskell
-
 newtype CurrencySymbol = CurrencySymbol { unCurrencySymbol :: Builtins.ByteString }
     deriving (IsString, Haskell.Show, Serialise, Pretty) via LedgerBytes
     deriving stock (Generic)
     deriving newtype (Haskell.Eq, Haskell.Ord, Eq, Ord, PlutusTx.IsData)
     deriving anyclass (Hashable, ToJSONKey, FromJSONKey,  NFData)
 ```
+
+`CurrencySymbol` is a bytestring that represents the script monetary policy hash of a token.
 
 #### mpsSymbol
 
@@ -2255,30 +2256,10 @@ assetClass :: CurrencySymbol -> TokenName -> AssetClass
 assetClass s t = AssetClass (s, t)
 ```
 
-#### mpsSymbol
-
-> The currency symbol of a monetay policy hash
-
-```haskell
-mpsSymbol :: MintingPolicyHash -> CurrencySymbol
-mpsSymbol (MintingPolicyHash h) = CurrencySymbol h
-```
-
 #### Value
 
 > A cryptocurrency value. This is a map from 'CurrencySymbol's to a
 > quantity of that currency.
->
-> Operations on currencies are usually implemented /pointwise/. That is,
-> we apply the operation to the quantities for each currency in turn. So
-> when we add two 'Value's the resulting 'Value' has, for each currency,
-> the sum of the quantities of /that particular/ currency in the argument
-> 'Value'. The effect of this is that the currencies in the 'Value' are "independent",
-> and are operated on separately.
->
-> Whenever we need to get the quantity of a currency in a 'Value' where there
-> is no explicit quantity of that currency in the 'Value', then the quantity is
-> taken to be zero.
 
 ```haskell
 newtype Value = Value { getValue :: Map.Map CurrencySymbol (Map.Map TokenName Integer) }
@@ -2287,6 +2268,8 @@ newtype Value = Value { getValue :: Map.Map CurrencySymbol (Map.Map TokenName In
     deriving newtype (Serialise, PlutusTx.IsData)
     deriving Pretty via (PrettyShow Value)
 ```
+
+The symbol of a token mapped to another map represented by the token names as the keys and integers as the values (the amount of the token in question).
 
 #### normalizeValue
 
@@ -2300,21 +2283,7 @@ normalizeValue = Value . Map.fromList . sort . filterRange (/=Map.empty)
         sort xs = Data.List.sortBy compare xs
 ```
 
-#### Currencies
-
-> The 'Value' type represents a collection of amounts of different currencies.
-> We can think of 'Value' as a vector space whose dimensions are
-> currencies. At the moment there is only a single currency (Ada), so 'Value'
-> contains one-dimensional vectors. When currency-creating transactions are
-> implemented, this will change and the definition of 'Value' will change to a
-> 'Map Currency Int', effectively a vector with infinitely many dimensions whose
-> non-zero values are recorded in the map.
-> To create a value of 'Value', we need to specifiy a currency. This can be done
-> using 'Ledger.Ada.adaValueOf'. To get the ada dimension of 'Value' we use
-> 'Ledger.Ada.fromValue'. Plutus contract authors will be able to define modules
-> similar to 'Ledger.Ada' for their own currencies.
-
-##### valueOf
+#### valueOf
 
 > Get the quantity of the given currency in the 'Value'.
 
@@ -2328,7 +2297,9 @@ valueOf (Value mp) cur tn =
             Just v  -> v
 ```
 
-##### symbols
+Based on a value, a currency symbol and a token name, tries to find the corresponding amount.
+
+#### symbols
 
 > The list of 'CurrencySymbol's of a 'Value'.
 
@@ -2337,7 +2308,7 @@ symbols :: Value -> [CurrencySymbol]
 symbols (Value mp) = Map.keys mp
 ```
 
-##### singleton
+#### singleton
 
 > Make a 'Value' containing only the given quantity of the given currency.
 
@@ -2346,7 +2317,7 @@ singleton :: CurrencySymbol -> TokenName -> Integer -> Value
 singleton c tn i = Value (Map.singleton c (Map.singleton tn i))
 ```
 
-##### assetClassValue
+#### assetClassValue
 
 > A 'Value' containing the given amount of the asset class.
 
@@ -2354,6 +2325,8 @@ singleton c tn i = Value (Map.singleton c (Map.singleton tn i))
 assetClassValue :: AssetClass -> Integer -> Value
 assetClassValue (AssetClass (c, t)) i = singleton c t i
 ```
+
+Because an asset class holds a currency symbol and a token name, we can create a value with this symbol and this unique token (using the `singleton` function) together with the given integer (the amount).
 
 ##### assetClassValueOf
 
@@ -2363,6 +2336,8 @@ assetClassValue (AssetClass (c, t)) i = singleton c t i
 assetClassValueOf :: Value -> AssetClass -> Integer
 assetClassValueOf v (AssetClass (c, t)) = valueOf v c t
 ```
+
+Because an asset class holds a currency symbol and a token name, we can find inside a value the corresponding amount of this token.
 
 ##### unionVal
 
@@ -2394,6 +2369,8 @@ unionWith f ls rs =
     in Value (fmap (fmap unThese) combined)
 ```
 
+Provided a function that takes two integers, as well as, two values, `unionWith` maps these values and applies the function giving both value amounts as paramaters, forming a new unique value.
+
 ##### flattenValue
 
 > Convert a value to a simple list, keeping only the non-zero amounts.
@@ -2406,6 +2383,8 @@ flattenValue v = do
     guard $ a /= 0
     return (cs, tn, a)
 ```
+
+Converting the value into a list of tuples can be useful for visualization and comparison.
 
 ##### isZero
 
@@ -2493,7 +2472,7 @@ eq :: Value -> Value -> Bool
 eq = checkBinRel (==)
 ```
 
-##### eq
+##### split
 
 > Split a value into its positive and negative parts. The first element of
 > the tuple contains the negative parts of the value, the second element
