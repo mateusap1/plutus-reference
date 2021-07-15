@@ -1986,6 +1986,8 @@ txOutPubKey :: TxOut -> Maybe PubKeyHash
 txOutPubKey TxOut{txOutAddress} = toPubKeyHash txOutAddress
 ```
 
+A transaction output address can be from a script or from a public key, `txOutPubKey`, returns the hash from the public key if the type is the right one.
+
 #### outAddress
 
 > The address of a transaction output.
@@ -2040,6 +2042,8 @@ data TxOutTx = TxOutTx { txOutTxTx :: Tx, txOutTxOut :: TxOut }
 txOutTxDatum :: TxOutTx -> Maybe Datum
 txOutTxDatum (TxOutTx tx out) = txOutDatum out >>= lookupDatum tx
 ```
+
+Get's the `TxOutTx` output datum hash (if it exists) and use that as an input to `lookupDatum tx` (in case it return's a `Just`), which will then return a `Just Datum` if there is a data corresponding to the hash in the transaction context.
 
 #### scriptTxOut'
 
