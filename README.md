@@ -1719,6 +1719,8 @@ lookupSignature :: PubKey -> Tx -> Maybe Signature
 lookupSignature s Tx{txSignatures} = Map.lookup s txSignatures
 ```
 
+Given a public key `PubKey` and a transaction `Tx`, verifies if this transaction's signatures field `txSignatures` (a map with `PubKey` representing the keys and `Signature` the values) contains a signature created by this public key. If it's able to find, return the signature wraped into a `Just`, otherwise return nothing.
+
 #### lookupDatum
 
 ```haskell
@@ -1726,12 +1728,20 @@ lookupDatum :: Tx -> DatumHash -> Maybe Datum
 lookupDatum Tx{txData} h = Map.lookup h txData
 ```
 
+Simmilar to lookupSignature, but instead of searching for a signature, searches for a Datum.
+
+Given a datum hash `DatumHash` and a transaction `Tx`, verifies if this transaction's data field `txData` (a map with `DatumHash` representing the keys and `Datum` the values) contains a `Datum` corresponding to this hash. If it's able to find, return the data wraped into a `Just`, otherwise return nothing.
+
 #### lookupRedeemer
 
 ```haskell
 lookupRedeemer :: Tx -> RedeemerPtr -> Maybe Redeemer
 lookupRedeemer tx p = Map.lookup p (txRedeemers tx)
 ```
+
+Simmilar to lookupSignature, but instead of searching for a signature, searches for a Redeemer.
+
+Given a redeemer pointer `RedeemerPtr` and a transaction `Tx`, verifies if this transaction's redeemer field `txRedeemers` (a map with `RedeemerPtr` representing the keys and `Redeemer` the values) contains a `Redeemer` corresponding to this pointer. If it's able to find, return the redeemer wraped into a `Just`, otherwise return nothing.
 
 #### validValuesTx
 
@@ -1770,6 +1780,8 @@ strip Tx{..} = TxStripped i txOutputs txMint txFee where
     i = Set.map txInRef txInputs
 ```
 
+Removes the witnesses from a transaction.
+
 #### txId
 
 > Compute the id of a transaction.
@@ -1805,6 +1817,8 @@ data RedeemerPtr = RedeemerPtr ScriptTag Integer
     deriving anyclass (Serialise, ToJSON, FromJSON, ToJSONKey, FromJSONKey, NFData)
 ```
 
+A data type used to represent / index redeemers without actually holding their data.
+
 #### Redeemers
 
 ```haskell
@@ -1823,6 +1837,8 @@ data TxOutRef = TxOutRef {
     deriving stock (Show, Eq, Ord, Generic)
     deriving anyclass (Serialise, ToJSON, FromJSON, ToJSONKey, FromJSONKey, NFData)
 ```
+
+A way of represent / index a transaction output without holding the output it self. Simmilar to `RedeemerPtr`.
 
 #### txOutRefs
 
@@ -1847,6 +1863,8 @@ data TxInType =
     deriving anyclass (Serialise, ToJSON, FromJSON, NFData)
 ```
 
+Indicates if this input is consuming a normal transaction or an input one. This may be useful, because in order to consume a script a validator need's to run.
+
 #### TxIn
 
 > A transaction input, consisting of a transaction output reference and an input type.
@@ -1859,6 +1877,8 @@ data TxIn = TxIn {
     deriving stock (Show, Eq, Ord, Generic)
     deriving anyclass (Serialise, ToJSON, FromJSON, NFData)
 ```
+
+Transaction inputs `TxIn` are unspent outputs that are now going to be spent. To represent them, you only need a reference to the output that is being consumed `txInRef` and it's type `txInType`.
 
 #### inRef
 
@@ -1891,6 +1911,8 @@ inScripts TxIn{ txInType = t } = case t of
     Just ConsumePublicKeyAddress      -> Nothing
     Nothing                           -> Nothing
 ```
+
+`inScripts` represent the essential information of a script. Because not all inputs are of script type, this function first verifies the type and, if the input is in fact a `ConsumeScriptAddress`, returns it's essential components (validator, redeemer and datum).
 
 #### pubKeyTxIn
 
@@ -1943,6 +1965,8 @@ data TxOut = TxOut {
     deriving stock (Show, Eq, Generic)
     deriving anyclass (Serialise, ToJSON, FromJSON, NFData)
 ```
+
+In order to represent a transaction output, you need to know who sent and how much he sent. Optionally you can also add a datum hash, which could be seen as a metadata. `TxOut` takes these two important arguments ( `txOutAddress` and `txOutValue` ), as well as an optional `txOutDatumHash` and store them.
 
 #### txOutDatum
 
