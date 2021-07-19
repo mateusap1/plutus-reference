@@ -3,30 +3,27 @@ A repository with some information I may need to refer later about the plutus le
 
 Note: This is still being written and, because of this, a lot of information is still missing and some of it may even be false, so make sure to do your own research when needed and **do not rely on this repository for handling critical data**.
 
-* [Ledger](#ledger)
-    * [Ada](#ada)
-    * [Address](#address)
-    * [Api](#api)
-    * [Bytes](#bytes)
-    * [Contexts](#contexts)
-    * [Credential](#credential)
-    * [Crypto](#crypto)
-    * [DCert](#dcert)
-    * [Examples](#examples)
-    * [Interval](#interval)
-    * [Orphans](#orphans)
-    * [Scripts](#scripts)
-    * [Slot](#slot)
-    * [Time](#time)
-    * [Tx](#tx)
-    * [TxId](#txid)
-    * [Value](#value)
+ * [Ada](#ada)
+ * [Address](#address)
+ * [Api](#api)
+ * [Bytes](#bytes)
+ * [Contexts](#contexts)
+ * [Credential](#credential)
+ * [Crypto](#crypto)
+ * [DCert](#dcert)
+ * [Examples](#examples)
+ * [Interval](#interval)
+ * [Orphans](#orphans)
+ * [Scripts](#scripts)
+ * [Slot](#slot)
+ * [Time](#time)
+ * [Tx](#tx)
+ * [TxId](#txid)
+ * [Value](#value)
 
-## [Ledger](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger)
+## [Ada](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Ada.hs)
 
-### [Ada](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Ada.hs)
-
-#### adaSymbol
+### adaSymbol
 
 > The 'CurrencySymbol' of the 'Ada' currency.
 
@@ -37,7 +34,7 @@ adaSymbol = TH.currencySymbol emptyByteString
 
 A `CurrencySymbol` is the hash of a script that will be executed to validate minting and burning. Because ADA is deflationary, it uses an "empty script", which means no one is able to mint nor burn any ADA. That's why `adaSymbol` is an `emptyByteString`.
 
-#### adaToken
+### adaToken
 
 > The 'TokenName' of the 'Ada' currency.
 
@@ -48,7 +45,7 @@ adaToken = TH.tokenName emptyByteString
 
 A `TokenName` is a string that represents a token (pretty self explanatory). So, for instance, if Bitcoin was a Plutus token, it's token name would probably be `"btc"`. In this spirit, `adaToken` is simply Ada's token name, but because Ada is the Cardano's "default token", it doesn't receive an `"ada"` token name, but instead an `emptyByteString`.
 
-#### Ada
+### Ada
 
 > ADA, the special currency on the Cardano blockchain. The unit of Ada is Lovelace, and 1M Lovelace is one Ada. See note [Currencies] in 'Ledger.Validation.Value.TH'.
 
@@ -75,7 +72,7 @@ instance Monoid Ada where
 makeLift ''Ada
 ```
 
-#### getAda
+### getAda
 
 > Get the amount of Ada (the unit of the currency Ada) in this 'Ada' value.
 
@@ -86,7 +83,7 @@ getAda (Lovelace i) = MkFixed i
 
 `Micro` is a representation of µ, which is just another way of saying `10^-6`. So, what `getAda` is doing is getting a `Lovelace` amount and wrapping it in a type that is a million times smaller than the value it holds.
 
-#### toValue
+### toValue
 
 > Create a 'Value' containing only the given 'Ada'.
 
@@ -97,7 +94,7 @@ toValue (Lovelace i) = TH.singleton adaSymbol adaToken i
 
 Based on an Ada (an amount basically), create a `Value`, which contains the token symbol, name and amount (in Ada).
 
-#### fromValue
+### fromValue
 
 > Get the 'Ada' in the given 'Value'.
 
@@ -108,7 +105,7 @@ fromValue v = Lovelace (TH.valueOf v adaSymbol adaToken)
 
 Ignores everything except the amount from a `Value`. So, for instance, one might want to verify if someone has sufficient funds. For that, he might not need to know the token's name or symbol, so he should use `fromValue` to extract the Ada amount only.
 
-#### lovelaceOf
+### lovelaceOf
 
 > Create 'Ada' representing the given quantity of Lovelace (the unit of the currency Ada).
 
@@ -117,7 +114,7 @@ lovelaceOf :: Integer -> Ada
 lovelaceOf = Lovelace
 ```
 
-#### adaOf
+### adaOf
 
 > Create 'Ada' representing the given quantity of Ada (1M Lovelace).
 
@@ -126,7 +123,7 @@ adaOf :: Micro -> Ada
 adaOf (MkFixed x) = Lovelace x
 ```
 
-#### lovelaceValueOf
+### lovelaceValueOf
 
 > A 'Value' with the given amount of Lovelace (the currency unit).
 >
@@ -137,7 +134,7 @@ lovelaceValueOf :: Integer -> Value
 lovelaceValueOf = TH.singleton adaSymbol adaToken
 ```
 
-#### adaValueOf
+### adaValueOf
 
 > A 'Value' with the given amount of Ada (the currency unit).
 >
@@ -148,7 +145,7 @@ adaValueOf :: Micro -> Value
 adaValueOf (MkFixed x) = TH.singleton adaSymbol adaToken x
 ```
 
-#### divide
+### divide
 
 > Divide one 'Ada' value by another.
 
@@ -158,7 +155,7 @@ divide (Lovelace a) (Lovelace b) = Lovelace (P.divide a b)
 ```
 
 
-#### isZero
+### isZero
 
 > Check whether an 'Ada' value is zero.
 
@@ -167,9 +164,9 @@ isZero :: Ada -> Bool
 isZero (Lovelace i) = i == 0
 ```
 
-### [Address](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Address.hs)
+## [Address](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Address.hs)
 
-#### Address
+### Address
 
 > Address with two kinds of credentials, normal and staking
 
@@ -194,7 +191,7 @@ instance PlutusTx.Eq Address where
 
 To be honest, I don't quite understand what a staking credential actually is, so fell free to submit a Pull Request giving a better explanation.
 
-#### pubKeyAddress
+### pubKeyAddress
 
 > The address that should be targeted by a transaction output locked by the given public key.
 
@@ -205,7 +202,7 @@ pubKeyAddress pk = Address (PubKeyCredential (pubKeyHash pk)) Nothing
 
 Takes the user's `PubKey`, hash it, makes a credential out of it and gives it as an `Address` constructor input.
 
-#### pubKeyHashAddress
+### pubKeyHashAddress
 
 > The address that should be targeted by a transaction output locked by the public key with the given hash.
 
@@ -217,7 +214,7 @@ pubKeyHashAddress pkh = Address (PubKeyCredential pkh) Nothing
 The only difference from `pubKeyAddress` is that it already receives a hashed public key so it doesn't need to hash it again.
 
 
-#### toPubKeyHash
+### toPubKeyHash
 
 > The PubKeyHash of the address, if any
 
@@ -229,7 +226,7 @@ toPubKeyHash _                                = Nothing
 
 Takes an `Address`, verify if it's credential is a public key one and, if so, returns it. If, in the other hand, is a script validator, returns `Nothing`.
 
-#### toValidatorHash
+### toValidatorHash
 
 > The validator hash of the address, if any
 
@@ -241,7 +238,7 @@ toValidatorHash _
 
 Same thing as `toPubKeyHash`, but instead of making sure that the address credential is a public key, it want's a script validator credential.
 
-#### scriptAddress
+### scriptAddress
 
 > The address that should be used by a transaction output locked by the given validator script.
 
@@ -252,7 +249,7 @@ scriptAddress validator = Address (ScriptCredential (validatorHash validator)) N
 
 Same thing as `pubKeyAddress`, but with a script validator instead of a public key. Takes the user's `Validator`, hash it, makes a credential out of it and gives it as an `Address` constructor input.
 
-#### scriptHashAddress
+### scriptHashAddress
 
 > he address that should be used by a transaction output locked by the given validator script hash.
 
@@ -263,7 +260,7 @@ scriptHashAddress vh = Address (ScriptCredential vh) Nothing
 
 Takes the user's `ValidatorHash`, makes a credential out of it and gives it as an `Address` constructor input.
 
-#### stakingCredential
+### stakingCredential
 
 > The staking credential of an address (if any)
 
@@ -273,18 +270,18 @@ stakingCredential (Address _ s) = s
 ```
 Returns a `StakingCredential` if the given address has one
 
-### [Api](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Api.hs)
+## [Api](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Api.hs)
 
 Nothing here, feel free to contribute!
 
-### [Bytes](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Bytes.hs)
+## [Bytes](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Bytes.hs)
 
 Nothing here, feel free to contribute!
 
 
-### [Contexts](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Contexts.hs)
+## [Contexts](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Contexts.hs)
 
-#### TxInInfo
+### TxInInfo
 
 > An input of a pending transaction.
 
@@ -295,7 +292,7 @@ data TxInInfo = TxInInfo
     } deriving (Generic)
 ```
 
-#### ScriptPurpose
+### ScriptPurpose
 
 > Purpose of the script that is currently running
 
@@ -313,7 +310,7 @@ If, alternativily, the script purpose is `Spending`, then it should store the [`
 
 If, in the other hand, it's purpouse is `Rewarding`, then it should store the `StakingCredential`, which is a credential containing the necessary information to assign rewards. The last one, I have no idea what is used for.
 
-#### TxInfo
+### TxInfo
 
 > A pending transaction. This is the view as seen by validator scripts, so some details are stripped out.
 
@@ -339,7 +336,7 @@ When validating a transaction inside a contract, it is important to know some in
 `txInfoInputs` is a list of inputs ([`TxInInfo`](#txininfo)), which are basically previous UTxOs (or previous outputs to be more technically correct) that were spent to generate new ones.
 `txInfoOutputs` is a list of newly created outputs ([`TxOut`](#txout)).
 
-#### ScriptContext
+### ScriptContext
 
 ```haskell
 data ScriptContext = ScriptContext{scriptContextTxInfo :: TxInfo, scriptContextPurpose :: ScriptPurpose }
@@ -347,7 +344,7 @@ data ScriptContext = ScriptContext{scriptContextTxInfo :: TxInfo, scriptContextP
 
 `ScriptContext` stores all the information about a possible transaction, as well as, what it is used for. Both of this actions are handled by `TxInfo` and `ScriptPurpose`, so it is simply a combination of both of these data types.
 
-#### findOwnInput
+### findOwnInput
 
 > Find the input currently being validated.
 
@@ -360,7 +357,7 @@ findOwnInput _ = Nothing
 
 The first thing `findOwnInput` does is to limit the number of valid paramaters (only contexts with a spending purpose, for example, will pass). By doing that we get two important variables: `txInfoInputs` and `txOutRef`, the former is a list containing all inputs in the context of this script, the latter is a reference to the user's previous UTxO output (our current input). What the function does is to go over each input, extract it's `TxInInfoOutRef` and, if it is equal to our `txOutRef`, return it, otherwise return `Nothing`.
 
-#### findDatum
+### findDatum
 
 > Find the data corresponding to a data hash, if there is one
 
@@ -373,7 +370,7 @@ findDatum dsh TxInfo{txInfoData} = snd <$> find f txInfoData
 
 Given a `DatumHash` and a `TxInfo`, search for a `Datum` with the corresponding hash inside `txInfoData` (an element of `TxInfo`). This is important because `TxOut`s don't store the datum it self, but it's hash, so in order to extract the data it self from a `TxOut` we need to use this function.
 
-#### findDatumHash
+### findDatumHash
 
 > Find the hash of a datum, if it is part of the pending transaction's hashes
 
@@ -386,7 +383,7 @@ findDatumHash ds TxInfo{txInfoData} = fst <$> find f txInfoData
 
 Does the same thing as `findDatum`, but instead of searching for a `Datum` given a `DatumHash`, searchs for a `DatumHash` given a `Datum`.
 
-#### findTxInByTxOutRef
+### findTxInByTxOutRef
 
 ```haskell
 findTxInByTxOutRef :: TxOutRef -> TxInfo -> Maybe TxInInfo
@@ -396,7 +393,7 @@ findTxInByTxOutRef outRef TxInfo{txInfoInputs} =
 
 Given a reference to an output (`TxOutRef`) and information about a transaction (`TxInfo`), `findTxInByTxOutRef` searches for an input whose reference to it's previous UTxO output is the same as the given output reference.
 
-#### findContinuingOutputs
+### findContinuingOutputs
 
 > Finds all the outputs that pay to the same script address that we are currently spending from, if any.
 
@@ -408,7 +405,7 @@ findContinuingOutputs ctx | Just TxInInfo{txInInfoResolved=TxOut{txOutAddress}} 
 findContinuingOutputs _ = Builtins.error()
 ```
 
-#### getContinuingOutputs
+### getContinuingOutputs
 
 ```haskell
 getContinuingOutputs :: ScriptContext -> [TxOut]
@@ -418,7 +415,7 @@ getContinuingOutputs ctx | Just TxInInfo{txInInfoResolved=TxOut{txOutAddress}} <
 getContinuingOutputs _ = Builtins.error()
 ```
 
-#### scriptCurrencySymbol
+### scriptCurrencySymbol
 
 > The 'CurrencySymbol' of a 'MintingPolicy'
 
@@ -429,7 +426,7 @@ scriptCurrencySymbol scrpt = let (MintingPolicyHash hsh) = mintingPolicyHash scr
 
 A `scriptCurrencySymbol` is the hash of the script that validates the minting policy. So that's what this function does, it gets a `MintingPolicy` script, hashes it and returns it in a `Value.currencySymbol` form.
 
-#### txSignedBy
+### txSignedBy
 
 > Check if a transaction was signed by the given public key.
 
@@ -443,7 +440,7 @@ txSignedBy TxInfo{txInfoSignatories} k = case find ((==) k) txInfoSignatories of
 Goes over each element of the `txInfoSignatories` list (a component of the `TxInfo` we received) and verifies if the signature is equal to the public key hash we want to compare (`k`).
 
 
-#### pubKeyOutput
+### pubKeyOutput
 
 > Get the public key hash that locks the transaction output, if any.
 
@@ -454,7 +451,7 @@ pubKeyOutput TxOut{txOutAddress} = toPubKeyHash txOutAddress
 
 Every `TxOut` contains an address and every `Address` has a Credential that can be of type `PubKeyCredential` or `ScriptCredential`. If the received output has an address with a public key credential, the function returns it's hash, otherwise it returns `Nothing`.
 
-#### ownHashes
+### ownHashes
 
 > Get the validator and datum hashes of the output that is curently being validated
 
@@ -464,7 +461,7 @@ ownHashes (findOwnInput -> Just TxInInfo{txInInfoResolved=TxOut{txOutAddress=Add
 ownHashes _                                                                                                                            = Builtins.error ()
 ```
 
-#### ownHash
+### ownHash
 
 > Get the hash of the validator script that is currently being validated.
 
@@ -473,7 +470,7 @@ ownHash :: ScriptContext -> ValidatorHash
 ownHash p = fst (ownHashes p)
 ```
 
-#### fromSymbol
+### fromSymbol
 
 > Convert a 'CurrencySymbol' to a 'ValidatorHash'
 
@@ -482,7 +479,7 @@ fromSymbol :: CurrencySymbol -> ValidatorHash
 fromSymbol (CurrencySymbol s) = ValidatorHash s
 ```
 
-#### scriptOutputsAt
+### scriptOutputsAt
 
 > Get the list of 'TxOut' outputs of the pending transaction at a given script address.
 
@@ -496,7 +493,7 @@ scriptOutputsAt h p =
 
 Return in a `(DatumHash,Value)` format every pending transactions output that has a matching `ValidatorHash` compared to the one received (`h`). In other words, returns a list with every transaction inside a script that has this user's public key as it's output.
 
-#### valueLockedBy
+### valueLockedBy
 
 > Get the total value locked by the given validator in this transaction.
 
@@ -507,7 +504,7 @@ valueLockedBy ptx h =
     in mconcat outputs
 ```
 
-#### pubKeyOutputsAt
+### pubKeyOutputsAt
 
 > Get the values paid to a public key address by a pending transaction.
 
@@ -519,7 +516,7 @@ pubKeyOutputsAt pk p =
     in mapMaybe flt (txInfoOutputs p)
 ```
 
-#### valuePaidTo
+### valuePaidTo
 
 > Get the total value paid to a public key address by a pending transaction.
 
@@ -528,7 +525,7 @@ valuePaidTo :: TxInfo -> PubKeyHash -> Value
 valuePaidTo ptx pkh = mconcat (pubKeyOutputsAt pkh ptx)
 ```
 
-#### adaLockedBy
+### adaLockedBy
 
 > Get the total amount of 'Ada' locked by the given validator in this transaction.
 
@@ -537,7 +534,7 @@ adaLockedBy :: TxInfo -> ValidatorHash -> Ada
 adaLockedBy ptx h = Ada.fromValue (valueLockedBy ptx h)
 ```
 
-#### signsTransaction
+### signsTransaction
 
 > Check if the provided signature is the result of signing the pending transaction (without witnesses) with the given public key.
 
@@ -553,7 +550,7 @@ More abstractly you could think of the signature as an actual written signature,
 
 More technically, every user has a private and public key. A cryptographic signature is a function that takes a private key and an arbitrary content and returns a value (the signature). Because of some mathematical correlation between the private and public key, we can use the public key together with the signature to know if they actually match (the owner of this public key actually signed it).
 
-#### valueSpent
+### valueSpent
 
 > Get the total value of inputs spent by this transaction.
 
@@ -564,7 +561,7 @@ valueSpent = foldMap (txOutValue . txInInfoResolved) . txInfoInputs
 
 `valueSpent` goes over each input and, not caring about it's sender, add it together.
 
-#### valueProduced
+### valueProduced
 
 > Get the total value of outputs produced by this transaction.
 
@@ -575,7 +572,7 @@ valueProduced = foldMap txOutValue . txInfoOutputs
 
 `valueProduced` goes over each output and, not caring about it's sender, add it together. In other words, does the same thing as `valueSpent`, but with outputs.
 
-#### ownCurrencySymbol
+### ownCurrencySymbol
 
 > The 'CurrencySymbol' of the current validator script.
 
@@ -587,7 +584,7 @@ ownCurrencySymbol _                                              = Builtins.erro
 
 Given a `ScriptContext`, if it's purpose is `Minting`, returns the currency symbol, otherwise throws an error, as other script purposes don't have any currency sybol.
 
-#### spendsOutput
+### spendsOutput
 
 > Check if the pending transaction spends a specific transaction output (identified by the hash of a transaction and an index into that transactions' outputs)
 
@@ -602,9 +599,9 @@ spendsOutput p h i =
     in any spendsOutRef (txInfoInputs p)
 ```
 
-### [Credential](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Credential.hs)
+## [Credential](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Credential.hs)
 
-#### StakingCredential
+### StakingCredential
 
 > Staking credential used to assign rewards
 
@@ -616,7 +613,7 @@ data StakingCredential
     deriving anyclass (ToJSON, FromJSON, Serialise, Hashable, NFData)
 ```
 
-#### Credential
+### Credential
 
 > Credential required to unlock a transaction output
 
@@ -630,9 +627,9 @@ data Credential
 
 `Credential` is used to, whenever you want to consume an UTxO, prove that you actually "own" this output.
 
-### [Crypto](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Crypto.hs)
+## [Crypto](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Crypto.hs)
 
-#### PubKey
+### PubKey
 
 > A cryptographic public key.
 
@@ -647,7 +644,7 @@ newtype PubKey = PubKey { getPubKey :: LedgerBytes }
 
 `PubKey` is someone's identity. It's used to identify the user that signed a transaction.
 
-#### PubKeyHash
+### PubKeyHash
 
 > The hash of a public key. This is frequently used to identify the public key, rather than the key itself.
 
@@ -662,7 +659,7 @@ newtype PubKeyHash = PubKeyHash { getPubKeyHash :: BS.ByteString }
 
 It's one layer above the actual `PubKey`, usually used to identify someone without actually providing the public key it self.
 
-#### PrivateKey
+### PrivateKey
 
 > A cryptographic private key.
 
@@ -676,7 +673,7 @@ newtype PrivateKey = PrivateKey { getPrivateKey :: LedgerBytes }
 
 The use of a `PrivateKey` is the only way to sign transactions. Only the actual user is supposed to have access to this key and, by providing the signature, the transaction content and the public key, any user can make sure that the person that signed this transaction had access to the private key and, therefore, is trustworthy.
 
-#### Signature
+### Signature
 
 > A message with a cryptographic signature.
 
@@ -692,7 +689,7 @@ A signature is a value produced by a function that takes a private key and an ar
 You could think it as an actual signature where the private key is the persons knowledge on how to write the symbols and letters in the correct way, while the content (or transaction) is a document and the public key is a set of signatures from this person used to verify it's validity.
 
 
-#### signedBy
+### signedBy
 
 > Check whether the given 'Signature' was signed by the private key corresponding to the given public key.
 
@@ -704,7 +701,7 @@ signedBy (Signature s) (PubKey k) txId =
     in throwCryptoError $ ED25519.verify <$> k' <*> pure (getTxId txId) <*> s' -- TODO: is this what we want
 ```
 
-#### signTx
+### signTx
 
 > Sign the hash of a transaction using a private key.
 
@@ -713,7 +710,7 @@ signTx :: TxId -> PrivateKey -> Signature
 signTx (TxId txId) = sign txId
 ```
 
-#### sign
+### sign
 
 > Sign a message using a private key.
 
@@ -728,14 +725,14 @@ sign  msg (PrivateKey privKey) =
     in throwCryptoError $ fmap convert (ED25519.sign <$> k <*> pure salt <*> pk <*> pure msg)
 ```
 
-#### fromHex
+### fromHex
 
 ```haskell
 fromHex :: BS.ByteString -> Either String PrivateKey
 fromHex = fmap PrivateKey . KB.fromHex
 ```
 
-#### toPubKey
+### toPubKey
 
 ```haskell
 toPublicKey :: PrivateKey -> PubKey
@@ -743,7 +740,7 @@ toPublicKey = PubKey . KB.fromBytes . BS.pack . BA.unpack . ED25519.toPublic . f
     f = throwCryptoError . ED25519.secretKey
 ```
 
-#### knownPrivateKeys
+### knownPrivateKeys
 
 ```haskell
 knownPrivateKeys :: [PrivateKey]
@@ -752,9 +749,9 @@ knownPrivateKeys = [privateKey1, privateKey2, privateKey3, privateKey4, privateK
 
 Arbitrary private keys usually used for testing purposes.
 
-### [DCert](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/DCert.hs)
+## [DCert](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/DCert.hs)
 
-#### DCert
+### DCert
 
 > A representation of the ledger DCert. Some information is digested, and not included
 
@@ -785,9 +782,9 @@ data DCert
 
 I don't know what this is, feel free to make a pull request if you do.
 
-### [Examples](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Examples.hs)
+## [Examples](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Examples.hs)
 
-#### alwaysSucceedingNAryFunction
+### alwaysSucceedingNAryFunction
 
 > Creates a script which has N arguments, and always succeeds.
 
@@ -801,7 +798,7 @@ alwaysSucceedingNAryFunction n = toShort $ toStrict $ serialise $ Scripts.Script
         body i = UPLC.LamAbs () (UPLC.DeBruijn 0) $ body (i-1)
 ```
 
-#### alwaysFailingNAryFunction
+### alwaysFailingNAryFunction
 
 > Creates a script which has N arguments, and always fails.
 
@@ -815,9 +812,9 @@ alwaysFailingNAryFunction n = toShort $ toStrict $ serialise $ Scripts.Script $ 
         body i = UPLC.LamAbs () (UPLC.DeBruijn 0) $ body (i-1)
 ```
 
-### [Interval](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Interval.hs)
+## [Interval](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Interval.hs)
 
-#### Interval
+### Interval
 
 > An interval of @a@s.
 >
@@ -834,7 +831,7 @@ data Interval a = Interval { ivFrom :: LowerBound a, ivTo :: UpperBound a }
 
 Because Cardano is a decentralised system and sometimes it may take a while for a transaction to spread, it's very useful to pass deadlines or simmilar arguments in intervals of time instead of periods. `Interval` is a data type that is used to do exactly that.
 
-#### Extended
+### Extended
 
 > A set extended with a positive and negative infinity.
 
@@ -846,7 +843,7 @@ data Extended a = NegInf | Finite a | PosInf
 
 Extends a value to include infinity
 
-#### Closure
+### Closure
 
 > Whether a bound is inclusive or not.
 
@@ -856,7 +853,7 @@ type Closure = Bool
 
 Given an interval 0 to 10, we can include 0 or exclude it and the same thing goes to 10. For instance if we define ]0, 10] (excluding 0), 0.0001 would be inside the interval, but not 0 it self.
 
-#### UpperBound
+### UpperBound
 
 > The upper bound of an interval.
 
@@ -868,7 +865,7 @@ data UpperBound a = UpperBound (Extended a) Closure
 
 A data type for deining upper bounds, it takes an extended value and a closure. The value indicates the bound it self (`Finite 7` or `PosInf` for instance) and the closure indicates if the value is included in the interval.
 
-#### LowerBound
+### LowerBound
 
 > The lower bound of an interval.
 
@@ -880,7 +877,7 @@ data LowerBound a = LowerBound (Extended a) Closure
 
 A data type for deining lower bounds
 
-#### strictUpperBound
+### strictUpperBound
 
 ```haskell
 strictUpperBound :: a -> UpperBound a
@@ -889,7 +886,7 @@ strictUpperBound a = UpperBound (Finite a) False
 
 An `UpperBound` that doesn't include it's value, only what's smaller
 
-#### strictLowerBound
+### strictLowerBound
 
 ```haskell
 strictLowerBound :: a -> LowerBound a
@@ -898,8 +895,7 @@ strictLowerBound a = LowerBound (Finite a) False
 
 A `LowerBound` that doesn't include it's value, only what's greater
 
-
-#### lowerBound
+### lowerBound
 
 ```haskell
 lowerBound :: a -> LowerBound a
@@ -908,7 +904,7 @@ lowerBound a = LowerBound (Finite a) True
 
 A `LowerBound` that does include it's value together with greater values
 
-#### upperBound
+### upperBound
 
 ```haskell
 upperBound :: a -> UpperBound a
@@ -917,7 +913,7 @@ upperBound a = UpperBound (Finite a) True
 
 An `UpperBound` that does include it's value together with smaller values
 
-#### interval
+### interval
 
 > @interval a b@ includes all values that are greater than or equal to @a@ and smaller than or equal to @b@. Therefore it includes @a@ and @b@.
 
@@ -928,7 +924,7 @@ interval s s' = Interval (lowerBound s) (upperBound s')
 
 Defines an interval from a given lower bound to a given upper bound, including the values themself
 
-#### singleton
+### singleton
 
 ```haskell
 singleton :: a -> Interval a
@@ -937,7 +933,7 @@ singleton s = interval s s
 
 Makes an interval representation of a point in time. Because a `singleton` only cares about one value, the upper bound is equal to the lower bound
 
-#### from
+### from
 
 > @from a@ is an 'Interval' that includes all values that are greater than or equal to @a@.
 
@@ -948,7 +944,7 @@ from s = Interval (lowerBound s) (UpperBound PosInf True)
 
 Defines an interval that goes from the given value to infinity. This means that, given a value A, any other value greater or equal to A is part of this interval
 
-#### to
+### to
 
 > @to a@ is an 'Interval' that includes all values that are smaller than @a@.
 
@@ -959,7 +955,7 @@ to s = Interval (LowerBound NegInf True) (upperBound s)
 
 Defines an interval that goes from the given value to negative infinity. This means that, given a value A, any other value less or equal to A is part of this interval
 
-#### always
+### always
 
 > An 'Interval' that covers every slot.
 
@@ -969,7 +965,7 @@ always = Interval (LowerBound NegInf True) (UpperBound PosInf True)
 ```
 
 
-#### never
+### never
 
 > An 'Interval' that is empty.
 
@@ -978,7 +974,7 @@ never :: Interval a
 never = Interval (LowerBound PosInf True) (UpperBound NegInf True)
 ```
 
-#### member
+### member
 
 > Check whether a value is in an interval.
 
@@ -987,7 +983,7 @@ member :: Ord a => a -> Interval a -> Bool
 member a i = i `contains` singleton a
 ```
 
-#### overlaps
+### overlaps
 
 > Check whether two intervals overlap, that is, whether there is a value that is a member of both intervals.
 
@@ -996,7 +992,7 @@ overlaps :: Ord a => Interval a -> Interval a -> Bool
 overlaps l r = not $ isEmpty (l `intersection` r)
 ```
 
-#### intersection
+### intersection
 
 > 'intersection a b' is the largest interval that is contained in 'a' and in 'b', if it exists.
 
@@ -1005,7 +1001,7 @@ intersection :: Ord a => Interval a -> Interval a -> Interval a
 intersection (Interval l1 h1) (Interval l2 h2) = Interval (max l1 l2) (min h1 h2)
 ```
 
-#### hull
+### hull
 
 > 'hull a b' is the smallest interval containing 'a' and 'b'.
 
@@ -1014,7 +1010,7 @@ hull :: Ord a => Interval a -> Interval a -> Interval a
 hull (Interval l1 h1) (Interval l2 h2) = Interval (min l1 l2) (max h1 h2)
 ```
 
-#### contains
+### contains
 
 > @a `contains` b@ is true if the 'Interval' @b@ is entirely contained in @a@. That is, @a `contains` b@ if for every entry @s@, if @member s b@ then @member s a@.
 
@@ -1023,7 +1019,7 @@ contains :: Ord a => Interval a -> Interval a -> Bool
 contains (Interval l1 h1) (Interval l2 h2) = l1 <= l2 && h2 <= h1
 ```
 
-#### isEmpty
+### isEmpty
 
 > Check if an 'Interval' is empty.
 
@@ -1035,7 +1031,7 @@ isEmpty (Interval (LowerBound v1 in1) (UpperBound v2 in2)) = case v1 `compare` v
     EQ -> not (in1 && in2)
 ```
 
-#### before
+### before
 
 > Check if a value is earlier than the beginning of an 'Interval'.
 
@@ -1044,7 +1040,7 @@ before :: Ord a => a -> Interval a -> Bool
 before h (Interval f _) = lowerBound h < f
 ```
 
-#### after
+### after
 
 > Check if a value is later than the end of a 'Interval'.
 
@@ -1053,13 +1049,13 @@ after :: Ord a => a -> Interval a -> Bool
 after h (Interval _ t) = upperBound h > t
 ```
 
-### [Orphans](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Orphans.hs)
+## [Orphans](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Orphans.hs)
 
 Nothing here, feel free to contribute!
 
-### [Scripts](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Scripts.hs)
+## [Scripts](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Scripts.hs)
 
-#### Script
+### Script
 
 > A script on the chain. This is an opaque type as far as the chain is concerned.
 
@@ -1087,7 +1083,7 @@ instance Haskell.Show Script where
 instance NFData Script
 ```
 
-#### scriptSize
+### scriptSize
 
 > The size of a 'Script'. No particular interpretation is given to this, other than that it is proportional to the serialized size of the script.
 
@@ -1096,7 +1092,7 @@ scriptSize :: Script -> Integer
 scriptSize (Script s) = UPLC.programSize s
 ```
 
-#### fromCompiledCode
+### fromCompiledCode
 
 > Turn a 'CompiledCode' (usually produced by 'compile') into a 'Script' for use with this package.
 
@@ -1105,7 +1101,7 @@ fromCompiledCode :: CompiledCode a -> Script
 fromCompiledCode = fromPlc . getPlc
 ```
 
-#### fromPlc
+### fromPlc
 
 ```haskell
 fromPlc :: UPLC.Program UPLC.NamedDeBruijn PLC.DefaultUni PLC.DefaultFun () -> Script
@@ -1114,7 +1110,7 @@ fromPlc (UPLC.Program a v t) =
     in Script $ UPLC.Program a v nameless
 ```
 
-#### applyScript
+### applyScript
 
 > Given two 'Script's, compute the 'Script' that consists of applying the first to the second.
 
@@ -1123,7 +1119,7 @@ applyScript :: Script -> Script -> Script
 applyScript (unScript -> s1) (unScript -> s2) = Script $ s1 `UPLC.applyProgram` s2
 ```
 
-#### ScriptError
+### ScriptError
 
 ```haskell
 data ScriptError =
@@ -1136,7 +1132,7 @@ data ScriptError =
 
 A data type to handle erros that happened inside a script or in the process of creating a script
 
-#### evaluateScript
+### evaluateScript
 
 > Evaluate a script, returning the trace log.
 
@@ -1160,7 +1156,7 @@ evaluateScript s = do
     Haskell.pure logOut
 ```
 
-#### mkValidatorScript
+### mkValidatorScript
 
 ```haskell
 mkValidatorScript :: CompiledCode (Data -> Data -> Data -> ()) -> Validator
@@ -1169,14 +1165,14 @@ mkValidatorScript = Validator . fromCompiledCode
 
 Given a compiled validator function (that takes the datum, redeemer and context and throws an error if something fails), returns an object of type `Validator`.
 
-#### unValidatorScript
+### unValidatorScript
 
 ```haskell
 unValidatorScript :: Validator -> Script
 unValidatorScript = getValidator
 ```
 
-#### mkMintingPolicyScript
+### mkMintingPolicyScript
 
 ```haskell
 mkMintingPolicyScript :: CompiledCode (Data -> Data -> ()) -> MintingPolicy
@@ -1185,7 +1181,7 @@ mkMintingPolicyScript = MintingPolicy . fromCompiledCode
 
 Given a compiled policy script function, returns an object of type `MintingPolicy`.
 
-#### unMintingPolicyScript
+### unMintingPolicyScript
 
 ```haskell
 
@@ -1193,7 +1189,7 @@ unMintingPolicyScript :: MintingPolicy -> Script
 unMintingPolicyScript = getMintingPolicy
 ```
 
-#### Validator
+### Validator
 
 > 'Validator' is a wrapper around 'Script's which are used as validators in transaction outputs.
 
@@ -1216,7 +1212,7 @@ instance BA.ByteArrayAccess Validator where
 
 `Validator` is a type that represents our validator script (a function that runs and either returns void or throws an error).
 
-#### Datum
+### Datum
 
 > 'Datum' is a wrapper around 'Data' values which are used as data in transaction outputs.
 
@@ -1236,7 +1232,7 @@ instance BA.ByteArrayAccess Datum where
 
 `Datum` is a type that represents the dat that is stored inside script outputs. If we make a comparsion to traditional applications we could compare it (not very accuratily, but it may help) to a database, though they have a lot of differences specially when we talk about their architeture.
 
-#### Redeemer
+### Redeemer
 
 > 'Redeemer' is a wrapper around 'Data' values that are used as redeemers in transaction inputs.
 
@@ -1258,7 +1254,7 @@ instance BA.ByteArrayAccess Redeemer where
 
 Differently from normal transactions, script transactions don't require the sender signature, but instead a type called `Redeemer`. This redeemer will be given by the person trying to consume the script UTxO and can be analyzed by the validator in order to decide if the user is or is not allowed to consume it.
 
-#### MintingPolicy
+### MintingPolicy
 
 > -- | 'MintingPolicy' is a wrapper around 'Script's which are used as validators for minting constraints.
 
@@ -1281,7 +1277,7 @@ instance BA.ByteArrayAccess MintingPolicy where
 
 A reference to the script that runs when someone is trying to mint a token. This script works just like the other ones, but instead of verifying if the user can consume the script UTxO, verifies if he can mint a token.
 
-#### ValidatorHash
+### ValidatorHash
 
 > Script runtime representation of a @Digest SHA256@.
 
@@ -1294,7 +1290,7 @@ newtype ValidatorHash =
     deriving anyclass (FromJSON, ToJSON, ToJSONKey, FromJSONKey, NFData)
 ```
 
-#### validatorHash
+### validatorHash
 
 ```haskell
 validatorHash :: Validator -> ValidatorHash
@@ -1304,7 +1300,7 @@ validatorHash vl = ValidatorHash $ BA.convert h' where
     e = serialise vl
 ```
 
-#### DatumHash
+### DatumHash
 
 > Script runtime representation of a @Digest SHA256@.
 
@@ -1317,13 +1313,13 @@ newtype DatumHash =
     deriving anyclass (FromJSON, ToJSON, ToJSONKey, FromJSONKey)
 ```
 
-#### datumHash
+### datumHash
 ```haskell
 datumHash :: Datum -> DatumHash
 datumHash = DatumHash . Builtins.sha2_256 . BA.convert
 ```
 
-#### RedeemerHash
+### RedeemerHash
 
 > Script runtime representation of a @Digest SHA256@.
 
@@ -1336,14 +1332,14 @@ newtype RedeemerHash =
     deriving anyclass (FromJSON, ToJSON, ToJSONKey, FromJSONKey)
 ```
 
-#### redeemerHash
+### redeemerHash
 
 ```haskell
 redeemerHash :: Redeemer -> RedeemerHash
 redeemerHash = RedeemerHash . Builtins.sha2_256 . BA.convert
 ```
 
-#### MintingPolicyHash
+### MintingPolicyHash
 
 > Script runtime representation of a @Digest SHA256@.
 
@@ -1356,7 +1352,7 @@ newtype MintingPolicyHash =
     deriving anyclass (FromJSON, ToJSON, ToJSONKey, FromJSONKey)
 ```
 
-#### mintingPolicyHash
+### mintingPolicyHash
 
 ```haskell
 mintingPolicyHash :: MintingPolicy -> MintingPolicyHash
@@ -1366,7 +1362,7 @@ mintingPolicyHash vl = MintingPolicyHash $ BA.convert h' where
     e = serialise vl
 ```
 
-#### Context
+### Context
 
 > Information about the state of the blockchain and about the transaction that is currently being validated, represented as a value in 'Data'.
 
@@ -1376,7 +1372,7 @@ newtype Context = Context Data
     deriving anyclass (ToJSON, FromJSON)
 ```
 
-#### applyValidator
+### applyValidator
 
 > Apply a 'Validator' to its 'Context', 'Datum', and 'Redeemer'.
 
@@ -1391,7 +1387,7 @@ applyValidator (Context valData) (Validator validator) (Datum datum) (Redeemer r
     ((validator `applyScript` (fromCompiledCode $ liftCode datum)) `applyScript` (fromCompiledCode $ liftCode redeemer)) `applyScript` (fromCompiledCode $ liftCode valData)
 ```
 
-#### runScript
+### runScript
 
 > Evaluate a 'Validator' with its 'Context', 'Datum', and 'Redeemer', returning the log.
 
@@ -1407,7 +1403,7 @@ runScript context validator datum redeemer = do
     evaluateScript (applyValidator context validator datum redeemer)
 ```
 
-#### applyMintingPolicy
+### applyMintingPolicy
 
 > Apply 'MintingPolicy' to its 'Context' and 'Redeemer'.
 
@@ -1421,7 +1417,7 @@ applyMintingPolicyScript (Context valData) (MintingPolicy validator) (Redeemer r
     (validator `applyScript` (fromCompiledCode $ liftCode red)) `applyScript` (fromCompiledCode $ liftCode valData)
 ```
 
-#### runMintingPolicyScript
+### runMintingPolicyScript
 
 > Evaluate a 'MintingPolicy' with its 'Context' and 'Redeemer', returning the log.
 
@@ -1436,7 +1432,7 @@ runMintingPolicyScript context mps red = do
     evaluateScript (applyMintingPolicyScript context mps red)
 ```
 
-#### unitDatum
+### unitDatum
 
 > @()@ as a datum.
 
@@ -1445,7 +1441,7 @@ unitDatum :: Datum
 unitDatum = Datum $ toData ()
 ```
 
-#### unitRedeemer
+### unitRedeemer
 
 > @()@ as a redeemer.
 
@@ -1454,9 +1450,9 @@ unitRedeemer :: Redeemer
 unitRedeemer = Redeemer $ toData ()
 ```
 
-### [Slot](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Slot.hs)
+## [Slot](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Slot.hs)
 
-#### Slot
+### Slot
 
 > The slot number. This is a good proxy for time, since on the Cardano blockchain slots pass at a constant rate.
 
@@ -1476,7 +1472,7 @@ instance Pretty (Interval Slot) where
     pretty (Interval l h) = pretty l <+> comma <+> pretty h
 ```
 
-#### SlotRange
+### SlotRange
 
 > An 'Interval' of 'Slot's.
 
@@ -1484,7 +1480,7 @@ instance Pretty (Interval Slot) where
 type SlotRange = Interval Slot
 ```
 
-#### width
+### width
 
 > Number of 'Slot's covered by the interval, if finite. @width (from x) == Nothing@.
 
@@ -1502,9 +1498,9 @@ width (Interval (LowerBound (Finite (Slot s1)) in1) (UpperBound (Finite (Slot s2
 width _ = Nothing
 ```
 
-### [Time](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Time.hs)
+## [Time](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Time.hs)
 
-#### DeffiMiliSeconds
+### DeffiMiliSeconds
 
 > This is a length of time, as measured by a number of milliseconds.
 
@@ -1517,7 +1513,7 @@ newtype DiffMilliSeconds = DiffMilliSeconds Integer
 makeLift ''DiffMilliSeconds
 ```
 
-#### POSIXTime
+### POSIXTime
 
 > POSIX time is measured as the number of milliseconds since 1970-01-01T00:00:00Z
 
@@ -1529,7 +1525,7 @@ newtype POSIXTime = POSIXTime { getPOSIXTime :: Integer }
   deriving newtype (Haskell.Num, Haskell.Enum, Haskell.Real, Haskell.Integral, Serialise, Hashable)
 ```
 
-#### FromJSON
+### FromJSON
 
 > Custom `FromJSON` instance which allows to parse a JSON number to a 'POSIXTime' value. The parsed JSON value MUST be an 'Integer' or else the parsing fails.
 
@@ -1543,7 +1539,7 @@ instance FromJSON POSIXTime where
       prependFailure "parsing POSIXTime failed, " (typeMismatch "Number" invalid)
 ```
 
-#### ToJSON
+### ToJSON
 
 > Custom 'ToJSON' instance which allows to simply convert a 'POSIXTime' value to a JSON number.
 
@@ -1554,7 +1550,7 @@ instance ToJSON POSIXTime where
 makeLift ''POSIXTime
 ```
 
-#### POSIXTimeRange
+### POSIXTimeRange
 
 > An 'Interval' of 'POSIXTime's.
 
@@ -1562,7 +1558,7 @@ makeLift ''POSIXTime
 type POSIXTimeRange = Interval POSIXTime
 ```
 
-#### fromMilliSecond
+### fromMilliSecond
 
 > Simple conversion from 'DiffMilliSeconds' to 'POSIXTime'.
 
@@ -1572,9 +1568,9 @@ fromMilliSeconds :: DiffMilliSeconds -> POSIXTime
 fromMilliSeconds (DiffMilliSeconds s) = POSIXTime s
 ```
 
-### [Tx](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Tx.hs)
+## [Tx](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Tx.hs)
 
-#### Tx
+### Tx
 
 > A transaction, including witnesses for its inputs.
 
@@ -1604,7 +1600,7 @@ data Tx = Tx {
       deriving anyclass (ToJSON, FromJSON, Serialise, NFData)
 ```
 
-#### inputs
+### inputs
 
 > The inputs of a transaction.
 
@@ -1615,7 +1611,7 @@ inputs = lens g s where
     s tx i = tx { txInputs = i }
 ```
 
-#### collateralInputs
+### collateralInputs
 
 > The collateral inputs of a transaction for paying fees when validating the transaction fails.
 
@@ -1626,7 +1622,7 @@ collateralInputs = lens g s where
     s tx i = tx { txCollateral = i }
 ```
 
-#### outputs
+### outputs
 
 > The outputs of a transaction.
 
@@ -1637,7 +1633,7 @@ outputs = lens g s where
     s tx o = tx { txOutputs = o }
 ```
 
-#### validRange
+### validRange
 
 > The validity range of a transaction.
 
@@ -1648,7 +1644,7 @@ validRange = lens g s where
     s tx o = tx { txValidRange = o }
 ```
 
-#### signatures
+### signatures
 
 ```haskell
 signatures :: Lens' Tx (Map PubKey Signature)
@@ -1657,7 +1653,7 @@ signatures = lens g s where
     s tx sig = tx { txSignatures = sig }
 ```
 
-#### fee
+### fee
 
 ```haskell
 fee :: Lens' Tx Value
@@ -1666,7 +1662,7 @@ fee = lens g s where
     s tx v = tx { txFee = v }
 ```
 
-#### mint
+### mint
 
 ```haskell
 mint :: Lens' Tx Value
@@ -1675,7 +1671,7 @@ mint = lens g s where
     s tx v = tx { txMint = v }
 ```
 
-#### mintScripts
+### mintScripts
 
 ```haskell
 mintScripts :: Lens' Tx (Set.Set MintingPolicy)
@@ -1685,7 +1681,7 @@ mintScripts = lens g s where
 ```
 
 
-#### redeemers
+### redeemers
 
 ```haskell
 redeemers :: Lens' Tx Redeemers
@@ -1694,7 +1690,7 @@ redeemers = lens g s where
     s tx reds = tx { txRedeemers = reds }
 ```
 
-#### datumWitnesses
+### datumWitnesses
 
 ```haskell
 datumWitnesses :: Lens' Tx (Map DatumHash Datum)
@@ -1703,7 +1699,7 @@ datumWitnesses = lens g s where
     s tx dat = tx { txData = dat }
 ```
 
-#### redeemers
+### redeemers
 
 ```haskell
 redeemers :: Lens' Tx Redeemers
@@ -1712,7 +1708,7 @@ redeemers = lens g s where
     s tx reds = tx { txRedeemers = reds }
 ```
 
-#### lookupSignature
+### lookupSignature
 
 ```haskell
 lookupSignature :: PubKey -> Tx -> Maybe Signature
@@ -1721,7 +1717,7 @@ lookupSignature s Tx{txSignatures} = Map.lookup s txSignatures
 
 Given a public key `PubKey` and a transaction `Tx`, verifies if this transaction's signatures field `txSignatures` (a map with `PubKey` representing the keys and `Signature` the values) contains a signature created by this public key. If it's able to find, return the signature wraped into a `Just`, otherwise return nothing.
 
-#### lookupDatum
+### lookupDatum
 
 ```haskell
 lookupDatum :: Tx -> DatumHash -> Maybe Datum
@@ -1732,7 +1728,7 @@ Simmilar to lookupSignature, but instead of searching for a signature, searches 
 
 Given a datum hash `DatumHash` and a transaction `Tx`, verifies if this transaction's data field `txData` (a map with `DatumHash` representing the keys and `Datum` the values) contains a `Datum` corresponding to this hash. If it's able to find, return the data wraped into a `Just`, otherwise return nothing.
 
-#### lookupRedeemer
+### lookupRedeemer
 
 ```haskell
 lookupRedeemer :: Tx -> RedeemerPtr -> Maybe Redeemer
@@ -1743,7 +1739,7 @@ Simmilar to lookupSignature, but instead of searching for a signature, searches 
 
 Given a redeemer pointer `RedeemerPtr` and a transaction `Tx`, verifies if this transaction's redeemer field `txRedeemers` (a map with `RedeemerPtr` representing the keys and `Redeemer` the values) contains a `Redeemer` corresponding to this pointer. If it's able to find, return the redeemer wraped into a `Just`, otherwise return nothing.
 
-#### validValuesTx
+### validValuesTx
 
 > Check that all values in a transaction are non-negative.
 
@@ -1755,7 +1751,7 @@ validValuesTx Tx{..}
       nonNegative i = V.geq i mempty
 ```
 
-#### TxStripped
+### TxStripped
 
 > A transaction without witnesses for its inputs.
 
@@ -1772,7 +1768,7 @@ data TxStripped = TxStripped {
     } deriving (Show, Eq, Generic, Serialise)
 ```
 
-#### strip
+### strip
 
 ```haskell
 strip :: Tx -> TxStripped
@@ -1782,7 +1778,7 @@ strip Tx{..} = TxStripped i txOutputs txMint txFee where
 
 Removes the witnesses from a transaction.
 
-#### txId
+### txId
 
 > Compute the id of a transaction.
 
@@ -1796,7 +1792,7 @@ txId tx = TxId $ BA.convert h' where
     h' = hash h
 ```
 
-#### ScriptTag
+### ScriptTag
 
 > A tag indicating the type of script that we are pointing to.
 > **NOTE:** Cert/Reward are not supported right now.
@@ -1807,7 +1803,7 @@ data ScriptTag = Spend | Mint | Cert | Reward
     deriving anyclass (Serialise, ToJSON, FromJSON, NFData)
 ```
 
-#### RedeemerPtr
+### RedeemerPtr
 
 > A redeemer pointer is a pair of a script type tag t and an index i, picking out the ith script of type t in the transaction.
 
@@ -1819,13 +1815,13 @@ data RedeemerPtr = RedeemerPtr ScriptTag Integer
 
 A data type used to represent / index redeemers without actually holding their data.
 
-#### Redeemers
+### Redeemers
 
 ```haskell
 type Redeemers = Map RedeemerPtr Redeemer
 ```
 
-#### TxOutRef
+### TxOutRef
 
 > A reference to a transaction output. This is a pair of a transaction reference, and an index indicating which of the outputs of that transaction we are referring to.
 
@@ -1840,7 +1836,7 @@ data TxOutRef = TxOutRef {
 
 A way of represent / index a transaction output without holding the output it self. Simmilar to `RedeemerPtr`.
 
-#### txOutRefs
+### txOutRefs
 
 > A list of a transaction's outputs paired with a 'TxOutRef's referring to them.
 
@@ -1850,7 +1846,7 @@ txOutRefs t = mkOut <$> zip [0..] (txOutputs t) where
     mkOut (i, o) = (o, TxOutRef (txId t) i)
 ```
 
-#### TxInType
+### TxInType
 
 > The type of a transaction input.
 
@@ -1865,7 +1861,7 @@ data TxInType =
 
 Indicates if this input is consuming a normal transaction or an input one. This may be useful, because in order to consume a script a validator need's to run.
 
-#### TxIn
+### TxIn
 
 > A transaction input, consisting of a transaction output reference and an input type.
 
@@ -1880,7 +1876,7 @@ data TxIn = TxIn {
 
 Transaction inputs `TxIn` are unspent outputs that are now going to be spent. To represent them, you only need a reference to the output that is being consumed `txInRef` and it's type `txInType`.
 
-#### inRef
+### inRef
 
 > The 'TxOutRef' spent by a transaction input.
 
@@ -1890,7 +1886,7 @@ inRef = lens txInRef s where
     s txi r = txi { txInRef = r }
 ```
 
-#### inType
+### inType
 
 > The type of a transaction input.
 
@@ -1900,7 +1896,7 @@ inType = lens txInType s where
     s txi t = txi { txInType = t }
 ```
 
-#### inScripts
+### inScripts
 
 > Validator, redeemer, and data scripts of a transaction input that spends a "pay to script" output.
 
@@ -1914,7 +1910,7 @@ inScripts TxIn{ txInType = t } = case t of
 
 `inScripts` represent the essential information of a script. Because not all inputs are of script type, this function first verifies the type and, if the input is in fact a `ConsumeScriptAddress`, returns it's essential components (validator, redeemer and datum).
 
-#### pubKeyTxIn
+### pubKeyTxIn
 
 > A transaction input that spends a "pay to public key" output, given the witness.
 
@@ -1923,7 +1919,7 @@ pubKeyTxIn :: TxOutRef -> TxIn
 pubKeyTxIn r = TxIn r (Just ConsumePublicKeyAddress)
 ```
 
-#### scriptTxIn
+### scriptTxIn
 
 > A transaction input that spends a "pay to script" output, given witnesses.
 
@@ -1932,7 +1928,7 @@ scriptTxIn :: TxOutRef -> Validator -> Redeemer -> Datum -> TxIn
 scriptTxIn ref v r d = TxIn ref . Just $ ConsumeScriptAddress v r d
 ```
 
-#### pubKeyTxIns
+### pubKeyTxIns
 
 > Filter to get only the pubkey inputs.
 
@@ -1941,7 +1937,7 @@ pubKeyTxIns :: Fold (Set.Set TxIn) TxIn
 pubKeyTxIns = folding (Set.filter (\TxIn{ txInType = t } -> t == Just ConsumePublicKeyAddress))
 ```
 
-#### scriptTxIns
+### scriptTxIns
 
 > Filter to get only the script inputs.
 
@@ -1952,7 +1948,7 @@ scriptTxIns = folding . Set.filter $ \case
     _                                              -> False
 ```
 
-#### TxOut
+### TxOut
 
 > A transaction output, consisting of a target address, a value, and optionally a datum hash.
 
@@ -1968,7 +1964,7 @@ data TxOut = TxOut {
 
 In order to represent a transaction output, you need to know who sent and how much he sent. Optionally you can also add a datum hash, which could be seen as a metadata. `TxOut` takes these two important arguments ( `txOutAddress` and `txOutValue` ), as well as an optional `txOutDatumHash` and store them.
 
-#### txOutDatum
+### txOutDatum
 
 > The datum attached to a 'TxOut', if there is one.
 
@@ -1977,7 +1973,7 @@ txOutDatum :: TxOut -> Maybe DatumHash
 txOutDatum TxOut{txOutDatumHash} = txOutDatumHash
 ```
 
-#### txOutPubKey
+### txOutPubKey
 
 > The public key attached to a 'TxOut', if there is one.
 
@@ -1988,7 +1984,7 @@ txOutPubKey TxOut{txOutAddress} = toPubKeyHash txOutAddress
 
 A transaction output address can be from a script or from a public key, `txOutPubKey`, returns the hash from the public key if the type is the right one.
 
-#### outAddress
+### outAddress
 
 > The address of a transaction output.
 
@@ -1998,7 +1994,7 @@ outAddress = lens txOutAddress s where
     s tx a = tx { txOutAddress = a }
 ```
 
-#### outValue
+### outValue
 
 > The value of a transaction output.
 
@@ -2008,7 +2004,7 @@ outValue = lens txOutValue s where
     s tx v = tx { txOutValue = v }
 ```
 
-#### isPubKeyOut
+### isPubKeyOut
 
 > Whether the output is a pay-to-pubkey output.
 
@@ -2017,7 +2013,7 @@ isPubKeyOut :: TxOut -> Bool
 isPubKeyOut = isJust . txOutPubKey
 ```
 
-#### isPayToScriptOut
+### isPayToScriptOut
 
 > Whether the output is a pay-to-script output.
 
@@ -2026,7 +2022,7 @@ isPayToScriptOut :: TxOut -> Bool
 isPayToScriptOut = isJust . txOutDatum
 ```
 
-#### TxOutTx
+### TxOutTx
 
 > A 'TxOut' along with the 'Tx' it comes from, which may have additional information e.g. the full data script that goes with the 'TxOut'.
 
@@ -2036,7 +2032,7 @@ data TxOutTx = TxOutTx { txOutTxTx :: Tx, txOutTxOut :: TxOut }
     deriving anyclass (Serialise, ToJSON, FromJSON)
 ```
 
-#### txOutTxDatum
+### txOutTxDatum
 
 ```haskell
 txOutTxDatum :: TxOutTx -> Maybe Datum
@@ -2045,7 +2041,7 @@ txOutTxDatum (TxOutTx tx out) = txOutDatum out >>= lookupDatum tx
 
 Get's the `TxOutTx` output datum hash (if it exists) and use that as an input to `lookupDatum tx` (in case it return's a `Just`), which will then return a `Just Datum` if there is a data corresponding to the hash in the transaction context.
 
-#### scriptTxOut'
+### scriptTxOut'
 
 > Create a transaction output locked by a validator script hash with the given data script attached.
 
@@ -2054,7 +2050,7 @@ scriptTxOut' :: Value -> Address -> Datum -> TxOut
 scriptTxOut' v a ds = TxOut a v (Just (datumHash ds))
 ```
 
-#### scriptTxOut
+### scriptTxOut
 
 > Create a transaction output locked by a validator script and with the given data script attached.
 
@@ -2063,7 +2059,7 @@ scriptTxOut :: Value -> Validator -> Datum -> TxOut
 scriptTxOut v vs = scriptTxOut' v (scriptAddress vs)
 ```
 
-#### pubKeyTxOut
+### pubKeyTxOut
 
 > Create a transaction output locked by a public key.
 
@@ -2072,7 +2068,7 @@ pubKeyTxOut :: Value -> PubKey -> TxOut
 pubKeyTxOut v pk = TxOut (pubKeyAddress pk) v Nothing
 ```
 
-#### pubKeyHashTxOut
+### pubKeyHashTxOut
 
 > Create a transaction output locked by a public key.
 
@@ -2081,7 +2077,7 @@ pubKeyHashTxOut :: Value -> PubKeyHash -> TxOut
 pubKeyHashTxOut v pkh = TxOut (pubKeyHashAddress pkh) v Nothing
 ```
 
-#### unspentOutputsTx
+### unspentOutputsTx
 
 > The unspent outputs of a transaction.
 
@@ -2091,7 +2087,7 @@ unspentOutputsTx t = Map.fromList $ fmap f $ zip [0..] $ txOutputs t where
     f (idx, o) = (TxOutRef (txId t) idx, o)
 ```
 
-#### spentOutputs
+### spentOutputs
 
 > The transaction output references consumed by a transaction.
 
@@ -2100,7 +2096,7 @@ spentOutputs :: Tx -> Set.Set TxOutRef
 spentOutputs = Set.map txInRef . txInputs
 ```
 
-#### updateUtxo
+### updateUtxo
 
 > Update a map of unspent transaction outputs and signatures based on the inputs and outputs of a transaction.
 
@@ -2109,7 +2105,7 @@ updateUtxo :: Tx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
 updateUtxo tx unspent = (unspent `Map.withoutKeys` spentOutputs tx) `Map.union` unspentOutputsTx tx
 ```
 
-#### updateUtxoCollateral
+### updateUtxoCollateral
 
 > Update a map of unspent transaction outputs and signatures for a failed transaction using its collateral inputs.
 
@@ -2118,7 +2114,7 @@ updateUtxoCollateral :: Tx -> Map TxOutRef TxOut -> Map TxOutRef TxOut
 updateUtxoCollateral tx unspent = unspent `Map.withoutKeys` (Set.map txInRef . txCollateral $ tx)
 ```
 
-#### addSignature
+### addSignature
 
 > Sign the transaction with a 'PrivateKey' and add the signature to the transaction's list of signatures.
 
@@ -2129,9 +2125,9 @@ addSignature privK tx = tx & signatures . at pubK ?~ sig where
     pubK = toPublicKey privK
 ```
 
-### [TxId](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/TxId.hs)
+## [TxId](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/TxId.hs)
 
-#### TxId
+### TxId
 
 > A transaction ID, using a SHA256 hash as the transaction id.
 
@@ -2143,9 +2139,9 @@ newtype TxId = TxId { getTxId :: BS.ByteString }
     deriving (Show, Pretty) via LedgerBytes
 ```
 
-### [Value](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Value.hs)
+## [Value](https://github.com/input-output-hk/plutus/blob/master/plutus-ledger-api/src/Plutus/V1/Ledger/Value.hs)
 
-#### CurrencySymbol
+### CurrencySymbol
 
 ```haskell
 newtype CurrencySymbol = CurrencySymbol { unCurrencySymbol :: Builtins.ByteString }
@@ -2157,7 +2153,7 @@ newtype CurrencySymbol = CurrencySymbol { unCurrencySymbol :: Builtins.ByteStrin
 
 `CurrencySymbol` is a bytestring that represents the script monetary policy hash of a token.
 
-#### mpsSymbol
+### mpsSymbol
 
 > The currency symbol of a monetay policy hash
 
@@ -2166,7 +2162,7 @@ mpsSymbol :: MintingPolicyHash -> CurrencySymbol
 mpsSymbol (MintingPolicyHash h) = CurrencySymbol h
 ```
 
-#### currencyMPSHash
+### currencyMPSHash
 
 > The minting policy hash of a currency symbol
 
@@ -2175,14 +2171,14 @@ currencyMPSHash :: CurrencySymbol -> MintingPolicyHash
 currencyMPSHash (CurrencySymbol h) = MintingPolicyHash h
 ```
 
-#### currencySymbol
+### currencySymbol
 
 ```haskell
 currencySymbol :: ByteString -> CurrencySymbol
 currencySymbol = CurrencySymbol
 ```
 
-#### TokenName
+### TokenName
 
 > ByteString of a name of a token, shown as UTF-8 string when possible
 
@@ -2195,49 +2191,49 @@ newtype TokenName = TokenName { unTokenName :: Builtins.ByteString }
     deriving Pretty via (PrettyShow TokenName)
 ```
 
-#### fromText
+### fromText
 
 ```haskell
 fromText :: Text -> TokenName
 fromText = TokenName . E.encodeUtf8
 ```
 
-#### fromTokenName
+### fromTokenName
 
 ```haskell
 fromTokenName :: (Builtins.ByteString -> r) -> (Text -> r) -> TokenName -> r
 fromTokenName handleBytestring handleText (TokenName bs) = either (\_ -> handleBytestring bs) handleText $ E.decodeUtf8' bs
 ```
 
-#### asBase16
+### asBase16
 
 ```haskell
 asBase16 :: Builtins.ByteString -> Text
 asBase16 bs = Text.concat ["0x", JSON.encodeByteString bs]
 ```
 
-#### quoted
+### quoted
 
 ```haskell
 quoted :: Text -> Text
 quoted s = Text.concat ["\"", s, "\""]
 ```
 
-#### toString
+### toString
 
 ```haskell
 toString :: TokenName -> Haskell.String
 toString = Text.unpack . fromTokenName asBase16 id
 ```
 
-#### tokenName
+### tokenName
 
 ```haskell
 tokenName :: ByteString -> TokenName
 tokenName = TokenName
 ```
 
-#### AssetClass
+### AssetClass
 
 > An asset class, identified by currency symbol and token name.
 
@@ -2249,14 +2245,14 @@ newtype AssetClass = AssetClass { unAssetClass :: (CurrencySymbol, TokenName) }
     deriving Pretty via (PrettyShow (CurrencySymbol, TokenName))
 ```
 
-#### assetClass
+### assetClass
 
 ```haskell
 assetClass :: CurrencySymbol -> TokenName -> AssetClass
 assetClass s t = AssetClass (s, t)
 ```
 
-#### Value
+### Value
 
 > A cryptocurrency value. This is a map from 'CurrencySymbol's to a
 > quantity of that currency.
@@ -2271,7 +2267,7 @@ newtype Value = Value { getValue :: Map.Map CurrencySymbol (Map.Map TokenName In
 
 The symbol of a token mapped to another map represented by the token names as the keys and integers as the values (the amount of the token in question).
 
-#### normalizeValue
+### normalizeValue
 
 ```haskell
 normalizeValue :: Value -> Value
@@ -2283,7 +2279,7 @@ normalizeValue = Value . Map.fromList . sort . filterRange (/=Map.empty)
         sort xs = Data.List.sortBy compare xs
 ```
 
-#### valueOf
+### valueOf
 
 > Get the quantity of the given currency in the 'Value'.
 
@@ -2299,7 +2295,7 @@ valueOf (Value mp) cur tn =
 
 Based on a value, a currency symbol and a token name, tries to find the corresponding amount.
 
-#### symbols
+### symbols
 
 > The list of 'CurrencySymbol's of a 'Value'.
 
@@ -2308,7 +2304,7 @@ symbols :: Value -> [CurrencySymbol]
 symbols (Value mp) = Map.keys mp
 ```
 
-#### singleton
+### singleton
 
 > Make a 'Value' containing only the given quantity of the given currency.
 
@@ -2317,7 +2313,7 @@ singleton :: CurrencySymbol -> TokenName -> Integer -> Value
 singleton c tn i = Value (Map.singleton c (Map.singleton tn i))
 ```
 
-#### assetClassValue
+### assetClassValue
 
 > A 'Value' containing the given amount of the asset class.
 
@@ -2328,7 +2324,7 @@ assetClassValue (AssetClass (c, t)) i = singleton c t i
 
 Because an asset class holds a currency symbol and a token name, we can create a value with this symbol and this unique token (using the `singleton` function) together with the given integer (the amount).
 
-##### assetClassValueOf
+#### assetClassValueOf
 
 > Get the quantity of the given 'AssetClass' class in the 'Value'.
 
@@ -2339,7 +2335,7 @@ assetClassValueOf v (AssetClass (c, t)) = valueOf v c t
 
 Because an asset class holds a currency symbol and a token name, we can find inside a value the corresponding amount of this token.
 
-##### unionVal
+#### unionVal
 
 > Combine two 'Value' maps
 
@@ -2355,7 +2351,7 @@ unionVal (Value l) (Value r) =
     in unThese <$> combined
 ```
 
-##### unionWith
+#### unionWith
 
 ```haskell
 unionWith :: (Integer -> Integer -> Integer) -> Value -> Value -> Value
@@ -2371,7 +2367,7 @@ unionWith f ls rs =
 
 Provided a function that takes two integers, as well as, two values, `unionWith` maps these values and applies the function giving both value amounts as paramaters, forming a new unique value.
 
-##### flattenValue
+#### flattenValue
 
 > Convert a value to a simple list, keeping only the non-zero amounts.
 
@@ -2386,7 +2382,7 @@ flattenValue v = do
 
 Converting the value into a list of tuples can be useful for visualization and comparison.
 
-##### isZero
+#### isZero
 
 > Check whether a 'Value' is zero.
 
@@ -2395,7 +2391,7 @@ isZero :: Value -> Bool
 isZero (Value xs) = Map.all (Map.all (\i -> 0 == i)) xs
 ```
 
-##### checkPred
+#### checkPred
 
 ```haskell
 checkPred :: (These Integer Integer -> Bool) -> Value -> Value -> Bool
@@ -2407,7 +2403,7 @@ checkPred f l r =
       Map.all inner (unionVal l r)
 ```
 
-##### checkBinRel
+#### checkBinRel
 
 > Check whether a binary relation holds for value pairs of two 'Value' maps, supplying 0 where a key is only present in one of them.
 
@@ -2422,7 +2418,7 @@ checkBinRel f l r =
     in checkPred unThese l r
 ```
 
-##### geq
+#### geq
 
 > Check whether one 'Value' is greater than or equal to another. See 'Value' for an explanation of how operations on 'Value's work.
 
@@ -2432,7 +2428,7 @@ geq :: Value -> Value -> Bool
 geq = checkBinRel (>=)
 ```
 
-##### gt
+#### gt
 
 > Check whether one 'Value' is strictly greater than another. See 'Value' for an explanation of how operations on 'Value's work.
 
@@ -2442,7 +2438,7 @@ gt :: Value -> Value -> Bool
 gt l r = not (isZero l && isZero r) && checkBinRel (>) l r
 ```
 
-##### leq
+#### leq
 
 > Check whether one 'Value' is less than or equal to another. See 'Value' for an explanation of how operations on 'Value's work.
 
@@ -2452,7 +2448,7 @@ leq :: Value -> Value -> Bool
 leq = checkBinRel (<=)
 ```
 
-##### lt
+#### lt
 
 > Check whether one 'Value' is strictly less than another. See 'Value' for an explanation of how operations on 'Value's work.
 
@@ -2462,7 +2458,7 @@ lt :: Value -> Value -> Bool
 lt l r = not (isZero l && isZero r) && checkBinRel (<) l r
 ```
 
-##### eq
+#### eq
 
 > Check whether one 'Value' is equal to another. See 'Value' for an explanation of how operations on 'Value's work.
 
@@ -2472,7 +2468,7 @@ eq :: Value -> Value -> Bool
 eq = checkBinRel (==)
 ```
 
-##### split
+#### split
 
 > Split a value into its positive and negative parts. The first element of
 > the tuple contains the negative parts of the value, the second element
